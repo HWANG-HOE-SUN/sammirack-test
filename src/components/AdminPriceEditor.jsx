@@ -1,519 +1,436 @@
+// src/components/AdminPriceEditor.jsx
 import React, { useState, useEffect } from 'react';
 import { 
+  saveAdminPriceSync, 
   loadAdminPrices, 
-  saveAdminPrice, 
-  loadPriceHistory, 
-  savePriceHistory, 
-  generatePartId,
-  getRackOptionsUsingPart 
-} from '../utils/unifiedPriceManager';
+  generatePartId 
+} from '../utils/realtimeAdminSync';
 
-const AdminPriceEditor = ({ item, onClose, onSave }) => {
-  const [editPrice, setEditPrice] = useState(item.unitPrice || 0);
-  const [originalPrice] = useState(item.unitPrice || 0);
-  const [history, setHistory] = useState([]);
-  const [activeTab, setActiveTab] = useState('edit'); // 'edit' or 'history'
-  const [loading, setLoading] = useState(false);
-  const [usingOptions, setUsingOptions] = useState([]);
+const AdminPriceEditor = ({ part, onClose, currentUser }) => {
+  const [newPrice, setNewPrice] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentAdminPrice, setCurrentAdminPrice] = useState(0);
+  const [message, setMessage] = useState('');
 
-  const partId = item.partId || generatePartId(item);
-
-  // 컴포넌트 마운트 시 히스토리 및 사용 옵션 로드
   useEffect(() => {
-    loadPriceHistoryData();
-    loadUsingOptions();
-    loadCurrentAdminPrice();
-  }, [partId]);
+    loadCurrentPrice();
+  }, [part]);
 
-  // 가격 변경 히스토리 로드
-  const loadPriceHistoryData = () => {
-    try {
-      const partHistory = loadPriceHistory(partId);
-      setHistory(partHistory);
-    } catch (error) {
-      console.error('히스토리 로드 실패:', error);
-      setHistory([]);
-    }
-  };
+  // 실시간 업데이트 감지
+  useEffect(() => {
+    const handlePriceUpdate = (event) => {
+      console.log('실시간 단가 업데이트 감지:', event.detail);
+      loadCurrentPrice();
+      setMessage('다른 PC에서 단가가 업데이트되었습니다.');
+      setTimeout(() => setMessage(''), 3000);
+    };
 
-  // 현재 관리자 수정 단가 로드
-  const loadCurrentAdminPrice = () => {
+    window.addEventListener('adminPricesUpdated', handlePriceUpdate);
+    return () => window.removeEventListener('adminPricesUpdated', handlePriceUpdate);
+  }, []);
+
+  const loadCurrentPrice = () => {
     try {
       const adminPrices = loadAdminPrices();
-      const currentAdminPrice = adminPrices[partId];
-      
-      if (currentAdminPrice && currentAdminPrice.price > 0) {
-        setEditPrice(currentAdminPrice.price);
-      }
+      const partId = generatePartId(part);
+      const currentPrice = adminPrices[partId]?.price || 0;
+      setCurrentAdminPrice(currentPrice);
+      setNewPrice(currentPrice > 0 ? currentPrice.toString() : '');
     } catch (error) {
-      console.error('현재 관리자 단가 로드 실패:', error);
+      console.error('현재 단가 로드 실패:', error);
     }
   };
 
-  // 이 부품을 사용하는 랙옵션들 로드
-  const loadUsingOptions = () => {
-    try {
-      const options = getRackOptionsUsingPart(partId);
-      setUsingOptions(options);
-    } catch (error) {
-      console.error('사용 옵션 로드 실패:', error);
-      setUsingOptions([]);
-    }
-  };
-
-  // 가격 저장 핸들러
   const handleSave = async () => {
-    if (loading) return;
+    const price = Number(newPrice);
     
-    setLoading(true);
+    if (price < 0) {
+      alert('가격은 0 이상이어야 합니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage('저장 중...');
+
     try {
-      const newPrice = Number(editPrice) || 0;
-      const oldPrice = originalPrice;
-      
-      // 관리자 단가 저장
-      const success = saveAdminPrice(partId, newPrice, {
-        rackType: item.rackType,
-        name: item.name,
-        specification: item.specification || '',
-        displayName: item.displayName || `${item.rackType} ${item.name} ${item.specification || ''}`.trim()
-      });
+      const partId = generatePartId(part);
+      const partInfo = {
+        rackType: part.rackType,
+        name: part.name,
+        specification: part.specification || '',
+        originalPrice: part.unitPrice || 0
+      };
+
+      const userInfo = {
+        username: currentUser?.username || 'admin',
+        role: currentUser?.role || 'admin'
+      };
+
+      // 실시간 동기화 저장
+      const success = await saveAdminPriceSync(partId, price, partInfo, userInfo);
       
       if (success) {
-        // 히스토리 저장
-        savePriceHistory(
-          partId, 
-          oldPrice, 
-          newPrice, 
-          item.displayName || `${item.rackType} ${item.name} ${item.specification || ''}`.trim()
-        );
+        setMessage('✅ 전 세계 모든 PC에 즉시 반영되었습니다!');
+        setCurrentAdminPrice(price);
         
-        // 히스토리 재로드
-        loadPriceHistoryData();
-        
-        // 상위 컴포넌트에 알림
-        if (onSave) {
-          onSave(partId, newPrice, oldPrice);
-        }
-        
-        // 모달 닫기
-        onClose();
+        // 3초 후 자동 닫기
+        setTimeout(() => {
+          onClose();
+        }, 2000);
       } else {
-        alert('단가 저장에 실패했습니다.');
+        setMessage('❌ 저장에 실패했습니다. 다시 시도해주세요.');
       }
     } catch (error) {
       console.error('단가 저장 실패:', error);
-      alert('단가 저장 중 오류가 발생했습니다.');
+      setMessage('❌ 저장 중 오류가 발생했습니다.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // 가격 삭제 (기본값으로 되돌리기)
-  const handleDelete = async () => {
-    if (loading) return;
-    
-    if (!confirm('관리자 수정 단가를 삭제하고 기본값으로 되돌리시겠습니까?')) {
+  const handleReset = async () => {
+    if (!confirm('이 부품의 관리자 수정 단가를 삭제하시겠습니까?\n기본 단가로 되돌아갑니다.')) {
       return;
     }
-    
-    setLoading(true);
+
+    setIsLoading(true);
+    setMessage('삭제 중...');
+
     try {
-      const oldPrice = editPrice;
-      
-      // 관리자 단가 삭제 (0으로 설정하면 삭제됨)
-      const success = saveAdminPrice(partId, 0);
+      const partId = generatePartId(part);
+      const partInfo = {
+        rackType: part.rackType,
+        name: part.name,
+        specification: part.specification || ''
+      };
+
+      const userInfo = {
+        username: currentUser?.username || 'admin',
+        role: currentUser?.role || 'admin'
+      };
+
+      // 실시간 동기화로 삭제 (price = 0으로 설정)
+      const success = await saveAdminPriceSync(partId, 0, partInfo, userInfo);
       
       if (success) {
-        // 히스토리 저장
-        savePriceHistory(
-          partId, 
-          oldPrice, 
-          originalPrice, 
-          `${item.displayName || `${item.rackType} ${item.name} ${item.specification || ''}`.trim()} (기본값으로 복원)`
-        );
+        setMessage('✅ 관리자 단가가 삭제되었습니다.');
+        setCurrentAdminPrice(0);
+        setNewPrice('');
         
-        // 기본값으로 되돌리기
-        setEditPrice(originalPrice);
-        
-        // 히스토리 재로드
-        loadPriceHistoryData();
-        
-        // 상위 컴포넌트에 알림
-        if (onSave) {
-          onSave(partId, originalPrice, oldPrice);
-        }
-        
-        alert('기본값으로 복원되었습니다.');
+        setTimeout(() => {
+          onClose();
+        }, 2000);
       } else {
-        alert('단가 삭제에 실패했습니다.');
+        setMessage('❌ 삭제에 실패했습니다.');
       }
     } catch (error) {
       console.error('단가 삭제 실패:', error);
-      alert('단가 삭제 중 오류가 발생했습니다.');
+      setMessage('❌ 삭제 중 오류가 발생했습니다.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        background: '#fff',
-        padding: '24px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        width: '100%',
-        maxWidth: '600px',
-        maxHeight: '80vh',
-        overflow: 'auto'
-      }}>
-        {/* 헤더 */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start',
-          marginBottom: '20px'
-        }}>
-          <div>
-            <h3 style={{ margin: 0, color: '#333', fontSize: '20px' }}>
-              부품 단가 수정
-            </h3>
-            <div style={{ 
-              fontSize: '14px', 
-              color: '#666', 
-              marginTop: '4px',
-              lineHeight: '1.4'
-            }}>
-              <strong>{item.rackType}</strong> - {item.name} {item.specification || ''}
-            </div>
-            <div style={{ 
-              fontSize: '12px', 
-              color: '#007bff', 
-              marginTop: '2px'
-            }}>
-              부품 ID: {partId}
-            </div>
+    <div className="admin-price-editor-overlay">
+      <div className="admin-price-editor">
+        <div className="editor-header">
+          <h3>관리자 단가 수정</h3>
+          <button onClick={onClose} className="close-btn">×</button>
+        </div>
+
+        <div className="part-info">
+          <div className="info-row">
+            <span className="label">랙타입:</span>
+            <span className="value">{part.rackType}</span>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '20px',
-              cursor: 'pointer',
-              color: '#666',
-              padding: '0',
-              width: '30px',
-              height: '30px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            ×
-          </button>
+          <div className="info-row">
+            <span className="label">부품명:</span>
+            <span className="value">{part.name}</span>
+          </div>
+          {part.specification && (
+            <div className="info-row">
+              <span className="label">규격:</span>
+              <span className="value">{part.specification}</span>
+            </div>
+          )}
+          <div className="info-row">
+            <span className="label">기본 단가:</span>
+            <span className="value">{(part.unitPrice || 0).toLocaleString()}원</span>
+          </div>
+          <div className="info-row">
+            <span className="label">현재 관리자 단가:</span>
+            <span className={`value ${currentAdminPrice > 0 ? 'active' : 'inactive'}`}>
+              {currentAdminPrice > 0 ? `${currentAdminPrice.toLocaleString()}원` : '없음'}
+            </span>
+          </div>
         </div>
 
-        {/* 탭 메뉴 */}
-        <div style={{ 
-          display: 'flex', 
-          borderBottom: '1px solid #eee',
-          marginBottom: '20px'
-        }}>
-          <button
-            onClick={() => setActiveTab('edit')}
-            style={{
-              padding: '10px 20px',
-              border: 'none',
-              background: activeTab === 'edit' ? '#007bff' : 'transparent',
-              color: activeTab === 'edit' ? 'white' : '#666',
-              cursor: 'pointer',
-              borderRadius: '4px 4px 0 0',
-              transition: 'all 0.2s'
-            }}
-          >
-            단가 수정
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            style={{
-              padding: '10px 20px',
-              border: 'none',
-              background: activeTab === 'history' ? '#007bff' : 'transparent',
-              color: activeTab === 'history' ? 'white' : '#666',
-              cursor: 'pointer',
-              borderRadius: '4px 4px 0 0',
-              transition: 'all 0.2s'
-            }}
-          >
-            변경 이력 ({history.length})
-          </button>
+        <div className="price-input-section">
+          <label htmlFor="newPrice">새 단가 (원)</label>
+          <input
+            type="number"
+            id="newPrice"
+            value={newPrice}
+            onChange={(e) => setNewPrice(e.target.value)}
+            placeholder="새 단가를 입력하세요"
+            min="0"
+            disabled={isLoading}
+          />
+          <small>0을 입력하면 기본 단가를 사용합니다.</small>
         </div>
 
-        {/* 단가 수정 탭 */}
-        {activeTab === 'edit' && (
-          <div>
-            {/* 현재 단가 정보 */}
-            <div style={{ 
-              backgroundColor: '#f8f9fa',
-              padding: '16px',
-              borderRadius: '6px',
-              marginBottom: '20px'
-            }}>
-              <div style={{ 
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '8px'
-              }}>
-                <span style={{ fontWeight: 'bold', color: '#333' }}>
-                  기본 단가:
-                </span>
-                <span style={{ fontSize: '16px', color: '#666' }}>
-                  {originalPrice ? originalPrice.toLocaleString() : '0'}원
-                </span>
-              </div>
-              <div style={{ 
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ fontWeight: 'bold', color: '#333' }}>
-                  현재 적용 단가:
-                </span>
-                <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#007bff' }}>
-                  {editPrice ? Number(editPrice).toLocaleString() : '0'}원
-                </span>
-              </div>
-            </div>
-
-            {/* 단가 입력 */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block',
-                marginBottom: '8px',
-                fontWeight: 'bold',
-                color: '#333'
-              }}>
-                새 단가 (원)
-              </label>
-              <input
-                type="number"
-                value={editPrice}
-                onChange={(e) => setEditPrice(e.target.value)}
-                min="0"
-                step="1"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  outline: 'none'
-                }}
-                placeholder="단가를 입력하세요"
-              />
-              <div style={{ 
-                fontSize: '12px',
-                color: '#666',
-                marginTop: '4px'
-              }}>
-                0원 입력 시 기본값을 사용합니다.
-              </div>
-            </div>
-
-            {/* 사용 랙옵션 정보 */}
-            {usingOptions.length > 0 && (
-              <div style={{ 
-                backgroundColor: '#e7f3ff',
-                padding: '16px',
-                borderRadius: '6px',
-                marginBottom: '20px',
-                border: '1px solid #b8daff'
-              }}>
-                <div style={{ 
-                  fontWeight: 'bold',
-                  color: '#0c5aa6',
-                  marginBottom: '8px'
-                }}>
-                  📋 이 부품을 사용하는 랙옵션 ({usingOptions.length}개)
-                </div>
-                <div style={{ 
-                  maxHeight: '120px',
-                  overflowY: 'auto',
-                  fontSize: '13px'
-                }}>
-                  {usingOptions.map((option, index) => (
-                    <div key={index} style={{ 
-                      marginBottom: '4px',
-                      color: '#0c5aa6'
-                    }}>
-                      • {option.displayName}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 액션 버튼 */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '12px',
-              justifyContent: 'flex-end'
-            }}>
-              <button
-                onClick={handleDelete}
-                disabled={loading}
-                style={{
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  padding: '12px 20px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  opacity: loading ? 0.6 : 1,
-                  transition: 'all 0.2s'
-                }}
-              >
-                기본값 복원
-              </button>
-              <button
-                onClick={onClose}
-                disabled={loading}
-                style={{
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  padding: '12px 20px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  opacity: loading ? 0.6 : 1,
-                  transition: 'all 0.2s'
-                }}
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={loading}
-                style={{
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  padding: '12px 20px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  opacity: loading ? 0.6 : 1,
-                  transition: 'all 0.2s'
-                }}
-              >
-                {loading ? '저장 중...' : '저장'}
-              </button>
-            </div>
+        {message && (
+          <div className={`message ${message.includes('✅') ? 'success' : message.includes('❌') ? 'error' : 'info'}`}>
+            {message}
           </div>
         )}
 
-        {/* 변경 이력 탭 */}
-        {activeTab === 'history' && (
-          <div>
-            {history.length > 0 ? (
-              <div style={{ 
-                maxHeight: '400px',
-                overflowY: 'auto'
-              }}>
-                {history.map((entry, index) => (
-                  <div key={entry.id || index} style={{
-                    padding: '12px',
-                    border: '1px solid #eee',
-                    borderRadius: '6px',
-                    marginBottom: '8px',
-                    backgroundColor: index === 0 ? '#f8f9fa' : 'white'
-                  }}>
-                    <div style={{ 
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '4px'
-                    }}>
-                      <span style={{ 
-                        fontSize: '12px',
-                        color: '#666'
-                      }}>
-                        {new Date(entry.timestamp).toLocaleString('ko-KR')}
-                      </span>
-                      <span style={{ 
-                        fontSize: '11px',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        padding: '2px 6px',
-                        borderRadius: '3px'
-                      }}>
-                        {entry.account}
-                      </span>
-                    </div>
-                    <div style={{ 
-                      fontSize: '14px',
-                      color: '#333',
-                      marginBottom: '4px'
-                    }}>
-                      <span style={{ 
-                        textDecoration: 'line-through',
-                        color: '#dc3545'
-                      }}>
-                        {entry.oldPrice.toLocaleString()}원
-                      </span>
-                      <span style={{ margin: '0 8px', color: '#666' }}>→</span>
-                      <span style={{ 
-                        fontWeight: 'bold',
-                        color: '#28a745'
-                      }}>
-                        {entry.newPrice.toLocaleString()}원
-                      </span>
-                    </div>
-                    {entry.rackOption && (
-                      <div style={{ 
-                        fontSize: '12px',
-                        color: '#666'
-                      }}>
-                        적용 랙옵션: {entry.rackOption}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ 
-                textAlign: 'center',
-                padding: '40px 20px',
-                color: '#666'
-              }}>
-                <div style={{ fontSize: '16px', marginBottom: '8px' }}>📝</div>
-                <div>변경 이력이 없습니다.</div>
-                <div style={{ fontSize: '13px', marginTop: '4px' }}>
-                  단가를 수정하면 이곳에 이력이 기록됩니다.
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="editor-actions">
+          <button 
+            onClick={handleSave} 
+            disabled={isLoading || newPrice === ''}
+            className="save-btn"
+          >
+            {isLoading ? '저장 중...' : '💾 전 세계 즉시 적용'}
+          </button>
+          
+          {currentAdminPrice > 0 && (
+            <button 
+              onClick={handleReset} 
+              disabled={isLoading}
+              className="reset-btn"
+            >
+              🗑️ 관리자 단가 삭제
+            </button>
+          )}
+          
+          <button onClick={onClose} className="cancel-btn">
+            취소
+          </button>
+        </div>
+
+        <div className="sync-info">
+          <small>
+            🌐 이 변경사항은 전 세계 모든 PC에서 즉시 반영됩니다.<br/>
+            💾 GitHub에 자동 백업되며, 오프라인 시에는 온라인 복구 시 동기화됩니다.
+          </small>
+        </div>
       </div>
+
+      <style jsx>{`
+        .admin-price-editor-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .admin-price-editor {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          width: 500px;
+          max-width: 90vw;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .editor-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 2px solid #f0f0f0;
+        }
+
+        .editor-header h3 {
+          margin: 0;
+          color: #333;
+          font-size: 18px;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: #666;
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .close-btn:hover {
+          background: #f0f0f0;
+          color: #333;
+        }
+
+        .part-info {
+          background: #f8f9fa;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        }
+
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+        }
+
+        .info-row:last-child {
+          margin-bottom: 0;
+        }
+
+        .label {
+          font-weight: bold;
+          color: #555;
+        }
+
+        .value {
+          color: #333;
+        }
+
+        .value.active {
+          color: #28a745;
+          font-weight: bold;
+        }
+
+        .value.inactive {
+          color: #6c757d;
+          font-style: italic;
+        }
+
+        .price-input-section {
+          margin-bottom: 20px;
+        }
+
+        .price-input-section label {
+          display: block;
+          margin-bottom: 8px;
+          font-weight: bold;
+          color: #333;
+        }
+
+        .price-input-section input {
+          width: 100%;
+          padding: 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 16px;
+          box-sizing: border-box;
+        }
+
+        .price-input-section input:focus {
+          border-color: #007bff;
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .price-input-section small {
+          display: block;
+          margin-top: 6px;
+          color: #666;
+          font-size: 14px;
+        }
+
+        .message {
+          padding: 12px;
+          border-radius: 6px;
+          margin-bottom: 20px;
+          font-weight: bold;
+        }
+
+        .message.success {
+          background: #d4edda;
+          color: #155724;
+          border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+          background: #f8d7da;
+          color: #721c24;
+          border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+          background: #d1ecf1;
+          color: #0c5460;
+          border: 1px solid #bee5eb;
+        }
+
+        .editor-actions {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+
+        .editor-actions button {
+          flex: 1;
+          padding: 12px 16px;
+          border: none;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .save-btn {
+          background: #28a745;
+          color: white;
+        }
+
+        .save-btn:hover:not(:disabled) {
+          background: #218838;
+        }
+
+        .save-btn:disabled {
+          background: #6c757d;
+          cursor: not-allowed;
+        }
+
+        .reset-btn {
+          background: #dc3545;
+          color: white;
+        }
+
+        .reset-btn:hover:not(:disabled) {
+          background: #c82333;
+        }
+
+        .cancel-btn {
+          background: #6c757d;
+          color: white;
+        }
+
+        .cancel-btn:hover {
+          background: #5a6268;
+        }
+
+        .sync-info {
+          background: #e3f2fd;
+          padding: 12px;
+          border-radius: 6px;
+          text-align: center;
+        }
+
+        .sync-info small {
+          color: #1565c0;
+          line-height: 1.4;
+        }
+      `}</style>
     </div>
   );
 };
