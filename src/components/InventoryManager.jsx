@@ -1,4 +1,526 @@
-} finally {
+// src/components/InventoryManager.jsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { sortBOMByMaterialRule } from '../utils/materialSort';
+import { 
+  loadAllMaterials, 
+  generatePartId, 
+  generateRackOptionId,
+  loadAdminPrices,
+  getEffectivePrice
+} from '../utils/unifiedPriceManager';
+import { 
+  saveInventorySync, 
+  loadInventory, 
+  forceServerSync 
+} from '../utils/realtimeAdminSync';
+import AdminPriceEditor from './AdminPriceEditor';
+
+// 무게명칭 변환
+function kgLabelFix(str) {
+  if (!str) return '';
+  return String(str).replace(/200kg/g, '270kg').replace(/350kg/g, '450kg');
+}
+
+// 재고 감소 함수 (export 필요)
+export const deductInventoryOnPrint = (cartItems, documentType = 'document', documentNumber = '') => {
+  if (!cartItems || !Array.isArray(cartItems)) {
+    console.warn('재고 감소: 유효하지 않은 카트 데이터');
+    return { success: false, message: '유효하지 않은 데이터' };
+  }
+  
+  console.log(`📋 프린트 재고 감소 시작: ${documentType} ${documentNumber}`);
+  
+  try {
+    // 현재 재고 데이터 로드
+    const stored = localStorage.getItem('inventory_data') || '{}';
+    const inventory = JSON.parse(stored);
+    
+    const deductedParts = [];
+    const warnings = [];
+    
+    // 모든 카트 아이템의 BOM 부품들을 추출하여 재고 감소
+    cartItems.forEach((item, itemIndex) => {
+      if (item.bom && Array.isArray(item.bom)) {
+        item.bom.forEach((bomItem) => {
+          const partId = generatePartId(bomItem);
+          const requiredQty = Number(bomItem.quantity) || 0;
+          const currentStock = inventory[partId] || 0;
+          
+          if (requiredQty > 0) {
+            if (currentStock >= requiredQty) {
+              // 충분한 재고가 있는 경우 감소
+              inventory[partId] = currentStock - requiredQty;
+              deductedParts.push({
+                partId,
+                name: bomItem.name,
+                specification: bomItem.specification || '',
+                deducted: requiredQty,
+                remainingStock: inventory[partId]
+              });
+            } else {
+              // 재고 부족 경고
+              warnings.push({
+                partId,
+                name: bomItem.name,
+                specification: bomItem.specification || '',
+                required: requiredQty,
+                available: currentStock,
+                shortage: requiredQty - currentStock
+              });
+              
+              // 가능한 만큼만 감소
+              if (currentStock > 0) {
+                inventory[partId] = 0;
+                deductedParts.push({
+                  partId,
+                  name: bomItem.name,
+                  specification: bomItem.specification || '',
+                  deducted: currentStock,
+                  remainingStock: 0
+                });
+              }
+            }
+          }
+        });
+      }
+    });
+    
+    // 변경된 재고 저장
+    localStorage.setItem('inventory_data', JSON.stringify(inventory));
+    
+    console.log(`✅ 재고 감소 완료: ${deductedParts.length}개 부품, ${warnings.length}개 경고`);
+    
+    return {
+      success: true,
+      deductedParts,
+      warnings,
+      message: `${deductedParts.length}개 부품 재고가 감소되었습니다.`
+    };
+    
+  } catch (error) {
+    console.error('❌ 재고 감소 처리 중 오류:', error);
+    return {
+      success: false,
+      message: '재고 감소 처리 중 오류가 발생했습니다.',
+      error: error.message
+    };
+  }
+};
+
+// 재고 감소 결과 사용자에게 표시
+export const showInventoryResult = (result, documentType) => {
+  if (!result) return;
+  
+  let message = `📄 ${documentType} 출력 완료\n`;
+  
+  if (result.success) {
+    message += `📦 재고 감소: ${result.deductedParts.length}개 부품 처리`;
+    
+    if (result.warnings.length > 0) {
+      message += `\n⚠️ 재고 부족 경고: ${result.warnings.length}개 부품`;
+      
+      // 재고 부족 부품 상세 (최대 3개)
+      const warningDetails = result.warnings.slice(0, 3).map(w => 
+        `• ${w.name}: 필요 ${w.required}개, 가용 ${w.available}개`
+      ).join('\n');
+      
+      message += '\n' + warningDetails;
+      
+      if (result.warnings.length > 3) {
+        message += `\n• 외 ${result.warnings.length - 3}개 부품...`;
+      }
+      
+      // 재고 부족 시 추가 안내
+      message += '\n\n재고 관리 탭에서 부족한 부품을 확인하고 보충하세요.';
+    }
+    
+    // 결과 표시
+    if (result.warnings.length > 0) {
+      // 경고가 있으면 confirm으로 재고 탭 이동 제안
+      if (window.confirm(message + '\n\n재고 관리 탭으로 이동하시겠습니까?')) {
+        window.dispatchEvent(new CustomEvent('showInventoryTab'));
+      }
+    } else {
+      // 정상 완료는 간단히 alert
+      alert(message);
+    }
+    
+  } else {
+    message += `❌ 재고 감소 실패: ${result.message}`;
+    alert(message);
+  }
+};
+
+const InventoryManager = ({ currentUser }) => {
+  const [allMaterials, setAllMaterials] = useState([]);
+  const [inventory, setInventory] = useState({});
+  const [adminPrices, setAdminPrices] = useState({});
+  const [rackOptions, setRackOptions] = useState([]);
+  const [filteredMaterials, setFilteredMaterials] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showOnlyInUse, setShowOnlyInUse] = useState(false);
+  const [selectedRackType, setSelectedRackType] = useState('');
+  const [editingPart, setEditingPart] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ field: '', direction: '' });
+  const [showAdminPriceEditor, setShowAdminPriceEditor] = useState(false);
+  const [editingPrice, setEditingPrice] = useState(null);
+  
+  // 실시간 동기화 관련
+  const [syncStatus, setSyncStatus] = useState('✅ 동기화됨');
+  const [lastSyncTime, setLastSyncTime] = useState(new Date());
+  
+  // 일괄 작업 관련
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState(''); // 일괄 작업 종류
+  const [bulkValue, setBulkValue] = useState(''); // 일괄 작업 값
+
+  // 관리자가 아닌 경우 접근 차단
+  if (currentUser?.role !== 'admin') {
+    return (
+      <div style={{ 
+        padding: '40px 20px', 
+        textAlign: 'center', 
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        color: '#6c757d'
+      }}>
+        <h3>접근 권한이 없습니다</h3>
+        <p>재고관리는 관리자만 접근할 수 있습니다.</p>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    loadAllMaterialsData();
+    loadInventoryData();
+    loadRackOptions();
+    setupRealtimeListeners();
+  }, []);
+
+  // 실시간 동기화 리스너 설정
+  const setupRealtimeListeners = () => {
+    const handleInventoryUpdate = (event) => {
+      console.log('📦 실시간 재고 업데이트:', event.detail);
+      setSyncStatus('🔄 동기화 중...');
+      loadInventoryData();
+      setLastSyncTime(new Date());
+      
+      setTimeout(() => {
+        setSyncStatus('✅ 동기화됨');
+      }, 1000);
+    };
+
+    const handlePriceUpdate = (event) => {
+      console.log('💰 실시간 단가 업데이트:', event.detail);
+      setSyncStatus('🔄 동기화 중...');
+      loadAdminPricesData();
+      setLastSyncTime(new Date());
+      
+      setTimeout(() => {
+        setSyncStatus('✅ 동기화됨');
+      }, 1000);
+    };
+
+    const handleForceReload = () => {
+      console.log('🔄 전체 데이터 강제 새로고침');
+      loadAllData();
+    };
+
+    window.addEventListener('inventoryUpdated', handleInventoryUpdate);
+    window.addEventListener('adminPricesUpdated', handlePriceUpdate);
+    window.addEventListener('forceDataReload', handleForceReload);
+
+    return () => {
+      window.removeEventListener('inventoryUpdated', handleInventoryUpdate);
+      window.removeEventListener('adminPricesUpdated', handlePriceUpdate);
+      window.removeEventListener('forceDataReload', handleForceReload);
+    };
+  };
+
+  // ✅ 개선된 전체 원자재 로드 (통합 함수 사용)
+  const loadAllMaterialsData = async () => {
+    setIsLoading(true);
+    try {
+      console.log('🔄 InventoryManager: 전체 원자재 로드 시작');
+      const materials = await loadAllMaterials();
+      setAllMaterials(materials);
+      console.log(`✅ InventoryManager: ${materials.length}개 원자재 로드 완료`);
+      
+      // 앙카볼트 등 주요 부품들이 포함되었는지 확인
+      const anchorBolts = materials.filter(m => m.name.includes('앙카볼트'));
+      const bracings = materials.filter(m => m.name.includes('브레싱'));
+      console.log(`🔧 앙카볼트: ${anchorBolts.length}개, 브레싱 관련: ${bracings.length}개`);
+      
+    } catch (error) {
+      console.error('❌ 전체 원자재 로드 실패:', error);
+      setAllMaterials([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 재고 데이터 로드
+  const loadInventoryData = () => {
+    try {
+      const data = loadInventory();
+      setInventory(data);
+      console.log(`📦 재고 데이터 로드: ${Object.keys(data).length}개 항목`);
+    } catch (error) {
+      console.error('❌ 재고 데이터 로드 실패:', error);
+      setInventory({});
+    }
+  };
+
+  // 관리자 단가 데이터 로드
+  const loadAdminPricesData = () => {
+    try {
+      const data = loadAdminPrices();
+      setAdminPrices(data);
+      console.log(`💰 관리자 단가 로드: ${Object.keys(data).length}개 항목`);
+    } catch (error) {
+      console.error('❌ 관리자 단가 로드 실패:', error);
+      setAdminPrices({});
+    }
+  };
+
+  // 랙옵션 목록 로드
+  const loadRackOptions = async () => {
+    try {
+      const bomResponse = await fetch('./bom_data.json');
+      const bomData = await bomResponse.json();
+      
+      const options = [];
+      
+      Object.keys(bomData).forEach(rackType => {
+        const rackData = bomData[rackType];
+        Object.keys(rackData).forEach(size => {
+          Object.keys(rackData[size]).forEach(height => {
+            Object.keys(rackData[size][height]).forEach(level => {
+              Object.keys(rackData[size][height][level]).forEach(formType => {
+                const productData = rackData[size][height][level][formType];
+                if (productData) {
+                  const optionId = generateRackOptionId(rackType, size, height, level, formType);
+                  const displayName = `${rackType} ${formType} ${size} ${height} ${level}`;
+                  
+                  options.push({
+                    id: optionId,
+                    rackType,
+                    size,
+                    height,
+                    level,
+                    formType,
+                    displayName
+                  });
+                }
+              });
+            });
+          });
+        });
+      });
+      
+      setRackOptions(options);
+    } catch (error) {
+      console.error('❌ 랙옵션 로드 실패:', error);
+    }
+  };
+
+  // 전체 데이터 로드
+  const loadAllData = async () => {
+    setIsLoading(true);
+    setSyncStatus('🔄 로딩 중...');
+    
+    try {
+      await Promise.all([
+        loadAllMaterialsData(),
+        loadInventoryData(),
+        loadAdminPricesData()
+      ]);
+      
+      setSyncStatus('✅ 동기화됨');
+      setLastSyncTime(new Date());
+    } catch (error) {
+      console.error('❌ 데이터 로드 실패:', error);
+      setSyncStatus('❌ 오류');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 재고 수량 변경 (실시간 동기화)
+  const handleInventoryChange = async (material, newQuantity) => {
+    const partId = material.partId || generatePartId(material);
+    const quantity = Math.max(0, Number(newQuantity) || 0);
+    
+    setSyncStatus('📤 저장 중...');
+    
+    try {
+      const userInfo = {
+        username: currentUser?.username || 'admin',
+        role: currentUser?.role || 'admin'
+      };
+
+      const success = await saveInventorySync(partId, quantity, userInfo);
+      
+      if (success) {
+        // 즉시 로컬 상태 업데이트
+        setInventory(prev => ({
+          ...prev,
+          [partId]: quantity
+        }));
+        
+        setSyncStatus('✅ 전세계 동기화됨');
+        setLastSyncTime(new Date());
+      } else {
+        setSyncStatus('❌ 저장 실패');
+      }
+    } catch (error) {
+      console.error('재고 저장 실패:', error);
+      setSyncStatus('❌ 오류');
+    }
+  };
+
+  // 서버에서 강제 동기화
+  const handleForceSync = async () => {
+    setSyncStatus('🔄 서버 동기화 중...');
+    
+    try {
+      await forceServerSync();
+      await loadAllData();
+      setSyncStatus('✅ 서버 동기화 완료');
+    } catch (error) {
+      console.error('서버 동기화 실패:', error);
+      setSyncStatus('❌ 동기화 실패');
+    }
+  };
+
+  // 검색 및 필터링 로직
+  useEffect(() => {
+    let result = [...allMaterials];
+
+    // 검색어 필터링
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter(material => {
+        const nameMatch = (material.name || '').toLowerCase().includes(searchLower);
+        const specMatch = (material.specification || '').toLowerCase().includes(searchLower);
+        const rackTypeMatch = (material.rackType || '').toLowerCase().includes(searchLower);
+        const categoryMatch = material.categoryName && material.categoryName.toLowerCase().includes(searchLower);
+        return nameMatch || specMatch || rackTypeMatch || categoryMatch;
+      });
+    }
+
+    // 랙타입 필터링
+    if (selectedRackType) {
+      result = result.filter(material => material.rackType === selectedRackType);
+    }
+
+    // 사용 중인 재고만 보기
+    if (showOnlyInUse) {
+      result = result.filter(material => {
+        const partId = material.partId || generatePartId(material);
+        return (inventory[partId] || 0) > 0;
+      });
+    }
+
+    // 정렬
+    if (sortConfig.field) {
+      result.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch (sortConfig.field) {
+          case 'name':
+            aValue = a.name || '';
+            bValue = b.name || '';
+            break;
+          case 'rackType':
+            aValue = a.rackType || '';
+            bValue = b.rackType || '';
+            break;
+          case 'quantity':
+            aValue = inventory[a.partId || generatePartId(a)] || 0;
+            bValue = inventory[b.partId || generatePartId(b)] || 0;
+            break;
+          case 'price':
+            aValue = getEffectivePrice(a);
+            bValue = getEffectivePrice(b);
+            break;
+          default:
+            return 0;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    setFilteredMaterials(result);
+  }, [allMaterials, searchTerm, selectedRackType, showOnlyInUse, sortConfig, inventory]);
+
+  // 정렬 처리
+  const handleSort = (field) => {
+    setSortConfig(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  // 체크박스 처리
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const allIds = new Set(filteredMaterials.map(m => m.partId || generatePartId(m)));
+      setSelectedItems(allIds);
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleSelectItem = (partId, checked) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(partId);
+      } else {
+        newSet.delete(partId);
+      }
+      return newSet;
+    });
+  };
+
+  // 일괄 작업 처리
+  const handleBulkAction = async () => {
+    if (!bulkAction || selectedItems.size === 0) {
+      alert('작업을 선택하고 항목을 체크해주세요.');
+      return;
+    }
+
+    const selectedCount = selectedItems.size;
+    
+    if (!confirm(`선택된 ${selectedCount}개 항목에 ${bulkAction === 'inventory' ? '재고 설정' : '단가 설정'}을 적용하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      for (const partId of selectedItems) {
+        if (bulkAction === 'inventory') {
+          const quantity = Math.max(0, Number(bulkValue) || 0);
+          await handleInventoryChange({ partId }, quantity);
+        }
+        // 단가 일괄 설정은 별도 구현 필요시 추가
+      }
+      
+      alert(`${selectedCount}개 항목의 ${bulkAction === 'inventory' ? '재고' : '단가'}가 업데이트되었습니다.`);
+      setSelectedItems(new Set());
+      setBulkAction('');
+      setBulkValue('');
+      
+    } catch (error) {
+      console.error('일괄 작업 실패:', error);
+      alert('일괄 작업 중 오류가 발생했습니다.');
+    } finally {
       setIsLoading(false);
     }
   };
