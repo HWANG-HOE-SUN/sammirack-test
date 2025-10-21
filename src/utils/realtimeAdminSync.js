@@ -12,7 +12,7 @@ const ACTIVITY_LOG_KEY = 'admin_activity_log';
 
 class RealtimeAdminSync {
   constructor() {
-    // GitHub 설정 - 환경변수에서 로드
+    // GitHub 설정 - 환경변수에서만 로드
     this.GIST_ID = import.meta.env.VITE_GITHUB_GIST_ID;
     this.GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
     
@@ -322,6 +322,11 @@ export const initRealtimeSync = () => {
     syncInstance = new RealtimeAdminSync();
   }
   return syncInstance;
+};
+
+// adminSyncManager export (Login.jsx에서 사용)
+export const adminSyncManager = {
+  getInstance: () => syncInstance || initRealtimeSync()
 };
 
 // 재고 저장 함수
