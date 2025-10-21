@@ -368,6 +368,62 @@ export const forceServerSync = async () => {
   }
 };
 
+// 부품 고유 ID 생성
+export const generatePartId = (item) => {
+  const { rackType, name, specification } = item;
+  const cleanName = (name || '').replace(/[^\w가-힣]/g, '');
+  const cleanSpec = (specification || '').replace(/[^\w가-힣]/g, '');
+  return `${rackType}-${cleanName}-${cleanSpec}`.toLowerCase();
+};
+
+// 관리자 단가 로드
+export const loadAdminPrices = () => {
+  try {
+    const stored = localStorage.getItem(ADMIN_PRICES_KEY) || '{}';
+    return JSON.parse(stored);
+  } catch (error) {
+    console.error('관리자 단가 로드 실패:', error);
+    return {};
+  }
+};
+
+// 관리자 단가 저장 (실시간 동기화)
+export const saveAdminPriceSync = async (partId, price, partInfo = {}, userInfo = {}) => {
+  try {
+    // 로컬 저장
+    const adminPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
+    
+    if (price && price > 0) {
+      adminPrices[partId] = {
+        price: Number(price),
+        timestamp: new Date().toISOString(),
+        account: userInfo.username || 'admin',
+        partInfo
+      };
+    } else {
+      // 가격이 0이면 삭제 (기본값 사용)
+      delete adminPrices[partId];
+    }
+
+    localStorage.setItem(ADMIN_PRICES_KEY, JSON.stringify(adminPrices));
+
+    // 브로드캐스트
+    if (syncInstance) {
+      syncInstance.broadcastUpdate('prices-updated', adminPrices);
+    }
+
+    // 서버 저장
+    if (syncInstance) {
+      await syncInstance.saveToServer();
+    }
+
+    return true;
+  } catch (error) {
+    console.error('관리자 단가 저장 실패:', error);
+    return false;
+  }
+};
+
 // 자동 초기화
 if (typeof window !== 'undefined') {
   initRealtimeSync();
