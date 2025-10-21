@@ -146,59 +146,74 @@ button.nav-link:hover {
   font-size: 14px;
 }
 
-/* Price Display */
-.price-display {
+/* Cart Styling */
+.cart {
   background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  border: 1px solid #dee2e6;
   border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
 }
 
-.price-display h3 {
+.cart h3 {
   margin-top: 0;
-  margin-bottom: 8px;
   color: #495057;
-  font-size: 18px;
 }
 
-.price {
-  font-size: 22px;
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item-info {
+  flex-grow: 1;
+}
+
+.cart-item-price {
   font-weight: bold;
-  color: #343a40;
+  color: #28a745;
+}
+
+.cart-total {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #007bff;
+  text-align: right;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid #007bff;
 }
 
 /* Action Buttons */
 .action-buttons {
   display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
 .toggle-bom-button,
 .create-estimate-button,
-.create-order-button {
-  padding: 9px 17px;
+.create-order-button,
+.create-delivery-note-button {
+  padding: 12px 24px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+  font-size: 16px;
   font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.2s;
   text-decoration: none;
   text-align: center;
+  transition: all 0.2s;
   display: inline-block;
-}
-.create-delivery-note-button{
-  padding: 9px 17px;
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  text-decoration: none;
-  text-align: center;
-  display: inline-block;
+  min-width: 150px;
 }
 
 .toggle-bom-button {
@@ -210,18 +225,13 @@ button.nav-link:hover {
   background-color: #5a6268;
 }
 
-.toggle-bom-button:disabled {
-  background-color: #adb5bd;
-  cursor: not-allowed;
-}
-
 .create-estimate-button {
-  background-color: #4a90e2;
+  background-color: #007bff;
   color: white;
 }
 
 .create-estimate-button:hover {
-  background-color: #357abd;
+  background-color: #0056b3;
 }
 
 .create-order-button {
@@ -233,70 +243,21 @@ button.nav-link:hover {
   background-color: #218838;
 }
 
-/* BOM Section */
-.bom-section {
-  margin-top: 16px;
-  padding: 14px;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
+.create-delivery-note-button {
+  background-color: #ffc107;
+  color: #212529;
 }
 
-.bom-section h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  color: #495057;
+.create-delivery-note-button:hover {
+  background-color: #e0a800;
 }
 
-/* Error Display */
-.error {
-  color: #721c24;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  padding: 8px;
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-
-/* Footer */
-.app-footer {
-  background-color: #2c3e50;
-  color: white;
-  text-align: center;
-  padding: 12px;
-  margin-top: auto;
-}
-
-.app-footer p {
-  margin: 0;
-  font-size: 14px;
-}
-
-/* Responsive Adjustments */
+/* Responsive Design */
 @media (max-width: 768px) {
-  .main-nav {
-    flex-direction: column;
-    height: auto;
-    padding: 10px;
-  }
-  
-  .nav-logo {
-    margin-bottom: 10px;
-  }
-  
-  .nav-links {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-  }
-  
-  .product-selection {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .form-group {
+  .app-container {
+    width: 98%;
     min-width: 100%;
+    overflow-x: auto;
   }
   
   .action-buttons {
@@ -321,13 +282,15 @@ button.nav-link:hover {
 }
 
 
-/* Login.jsx styles */
+/* Login.jsx styles - 수정된 버전 */
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   background-color: #f0f2f5;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .login-form {
@@ -338,6 +301,7 @@ button.nav-link:hover {
   width: 100%;
   max-width: 400px;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .login-form h2 {
@@ -372,15 +336,19 @@ button.nav-link:hover {
   cursor: not-allowed;
 }
 
-/* 비밀번호 입력 컨테이너 */
+/* 비밀번호 입력 컨테이너 수정 */
 .password-input-container {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .password-input-container input {
-  padding-right: 38px;
+  width: 100%;
+  padding-right: 45px;
+  box-sizing: border-box;
 }
 
 .password-toggle-btn {
@@ -393,6 +361,7 @@ button.nav-link:hover {
   padding: 5px;
   color: #666;
   transition: color 0.2s;
+  flex-shrink: 0;
 }
 
 .password-toggle-btn:hover {
@@ -427,13 +396,29 @@ button.nav-link:hover {
   font-size: 18px;
   width: 100%;
   transition: background-color 0.3s ease;
+  box-sizing: border-box;
 }
 
 .login-button:hover {
   background-color: #0056b3;
 }
 
-
+/* 반응형 처리 */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 10px;
+  }
+  
+  .login-form {
+    padding: 24px 20px;
+    max-width: 350px;
+  }
+  
+  .form-group input[type="text"],
+  .form-group input[type="password"] {
+    font-size: 16px; /* iOS 확대 방지 */
+  }
+}
 
 /* Password Change Modal styles */
 .password-change-overlay {
