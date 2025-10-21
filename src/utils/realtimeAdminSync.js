@@ -373,11 +373,16 @@ export const forceServerSync = async () => {
   }
 };
 
-// 부품 고유 ID 생성
+// 부품 고유 ID 생성 (안전 체크 추가)
 export const generatePartId = (item) => {
-  const { rackType, name, specification } = item;
-  const cleanName = (name || '').replace(/[^\w가-힣]/g, '');
-  const cleanSpec = (specification || '').replace(/[^\w가-힣]/g, '');
+  if (!item) {
+    console.warn('generatePartId: item이 undefined입니다');
+    return 'unknown-part';
+  }
+  
+  const { rackType = '', name = '', specification = '' } = item;
+  const cleanName = String(name).replace(/[^\w가-힣]/g, '');
+  const cleanSpec = String(specification).replace(/[^\w가-힣]/g, '');
   return `${rackType}-${cleanName}-${cleanSpec}`.toLowerCase();
 };
 
