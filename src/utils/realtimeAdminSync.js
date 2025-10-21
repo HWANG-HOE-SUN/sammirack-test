@@ -13,9 +13,14 @@ class RealtimeAdminSyncManager {
     this.pendingChanges = new Map();
     this.isOnline = navigator.onLine;
     
-    // ⚠️ 여기에 실제 GitHub 정보 입력하세요!
-    this.GIST_ID = '5b2b6471bcc09c7c40c44413a0ed6baf'; // 2단계에서 얻은 Gist ID
-    this.GITHUB_TOKEN = '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'; // 1단계에서 얻은 토큰
+    // 환경변수에서 GitHub 정보 가져오기
+    this.GIST_ID = import.meta.env.VITE_GITHUB_GIST_ID;
+    this.GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
+    
+    console.log('🔧 GitHub 설정 확인:', {
+      gistId: this.GIST_ID ? '설정됨' : '미설정',
+      token: this.GITHUB_TOKEN ? '설정됨' : '미설정'
+    });
     
     this.init();
   }
@@ -124,6 +129,7 @@ class RealtimeAdminSyncManager {
       // 3. 서버 동기화 (온라인일 때)
       if (this.isOnline && this.isGitHubConfigured()) {
         await this.saveToServer('admin_edit_prices', partId, changeData);
+        console.log('🌐 GitHub 동기화 완료');
       } else {
         // 오프라인이거나 GitHub 미설정시 대기열에 추가
         this.pendingChanges.set(`price_${partId}`, changeData);
@@ -166,6 +172,7 @@ class RealtimeAdminSyncManager {
       // 3. 서버 동기화
       if (this.isOnline && this.isGitHubConfigured()) {
         await this.saveToServer('inventory_data', partId, changeData);
+        console.log('🌐 GitHub 재고 동기화 완료');
       } else {
         this.pendingChanges.set(`inventory_${partId}`, changeData);
       }
@@ -184,9 +191,17 @@ class RealtimeAdminSyncManager {
 
   // GitHub 설정 확인
   isGitHubConfigured() {
-    return this.GIST_ID !== 'YOUR_GIST_ID_HERE' && 
-           this.GITHUB_TOKEN !== 'YOUR_GITHUB_TOKEN_HERE' &&
-           this.GIST_ID && this.GITHUB_TOKEN;
+    const configured = this.GIST_ID && this.GITHUB_TOKEN && 
+                     this.GIST_ID.length > 10 && this.GITHUB_TOKEN.length > 10;
+    
+    if (!configured) {
+      console.warn('⚠️ GitHub 설정 미완료:', {
+        gistId: this.GIST_ID ? '있음' : '없음',
+        token: this.GITHUB_TOKEN ? '있음' : '없음'
+      });
+    }
+    
+    return configured;
   }
 
   // 서버에 저장
@@ -216,10 +231,10 @@ class RealtimeAdminSyncManager {
       
       await this.updateGist(gistData);
       
-      console.log(`📤 서버 저장 완료: ${dataType}/${partId}`);
+      console.log(`📤 GitHub 저장 완료: ${dataType}/${partId}`);
       
     } catch (error) {
-      console.error('❌ 서버 저장 실패:', error);
+      console.error('❌ GitHub 저장 실패:', error);
       // 실패하면 대기열에 추가
       this.pendingChanges.set(`${dataType}_${partId}`, data);
     }
@@ -228,7 +243,7 @@ class RealtimeAdminSyncManager {
   // 서버에서 로드
   async loadFromServer(specificType = null) {
     if (!this.isGitHubConfigured()) {
-      console.warn('⚠️ GitHub 미설정 - 로컬 데이터만 사용');
+      console.log('⚠️ GitHub 미설정 - 로컬 데이터만 사용');
       return null;
     }
 
@@ -243,18 +258,20 @@ class RealtimeAdminSyncManager {
       if (gistData.admin_edit_prices) {
         localStorage.setItem('admin_edit_prices', JSON.stringify(gistData.admin_edit_prices));
         this.emitGlobalEvent('adminPricesUpdated', { source: 'server' });
+        console.log('📥 GitHub에서 관리자 단가 동기화 완료');
       }
       
       if (gistData.inventory_data) {
         localStorage.setItem('inventory_data', JSON.stringify(gistData.inventory_data));
         this.emitGlobalEvent('inventoryUpdated', { source: 'server' });
+        console.log('📥 GitHub에서 재고 데이터 동기화 완료');
       }
       
-      console.log('📥 서버 데이터 로드 완료');
+      console.log('📥 GitHub 서버 데이터 로드 완료');
       return gistData;
       
     } catch (error) {
-      console.error('❌ 서버 데이터 로드 실패:', error);
+      console.error('❌ GitHub 서버 데이터 로드 실패:', error);
       return null;
     }
   }
@@ -277,26 +294,41 @@ class RealtimeAdminSyncManager {
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub API 오류: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`GitHub API 오류: ${response.status} ${response.statusText} - ${errorText}`);
     }
+
+    console.log('🌐 GitHub Gist 업데이트 성공');
   }
 
   // GitHub Gist 가져오기
   async fetchGist() {
     const response = await fetch(`https://api.github.com/gists/${this.GIST_ID}`, {
       headers: {
-        'Authorization': `token ${this.GITHUB_TOKEN}`
+        'Authorization': `token ${this.GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub API 오류: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`GitHub API 오류: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const gist = await response.json();
     const content = gist.files['sammi_admin_data.json']?.content;
     
-    return content ? JSON.parse(content) : {};
+    if (!content) {
+      console.warn('⚠️ GitHub Gist에 데이터 파일이 없습니다. 초기화합니다.');
+      return {
+        admin_edit_prices: {},
+        inventory_data: {},
+        lastUpdated: new Date().toISOString(),
+        version: Date.now()
+      };
+    }
+    
+    return JSON.parse(content);
   }
 
   // 로컬 저장
@@ -369,8 +401,9 @@ class RealtimeAdminSyncManager {
         const [dataType, partId] = key.split('_', 2);
         await this.saveToServer(dataType, partId, data);
         this.pendingChanges.delete(key);
+        console.log(`✅ 대기 중인 변경사항 동기화 완료: ${key}`);
       } catch (error) {
-        console.error(`동기화 실패: ${key}`, error);
+        console.error(`❌ 동기화 실패: ${key}`, error);
       }
     }
   }
@@ -397,6 +430,38 @@ class RealtimeAdminSyncManager {
       return data.ip;
     } catch (error) {
       return 'Unknown';
+    }
+  }
+
+  // 강제 동기화 테스트
+  async testSync() {
+    console.log('🧪 동기화 테스트 시작...');
+    
+    if (!this.isGitHubConfigured()) {
+      console.error('❌ GitHub 설정이 필요합니다.');
+      return false;
+    }
+
+    try {
+      // 테스트 데이터 저장
+      const testData = {
+        test: {
+          timestamp: new Date().toISOString(),
+          message: 'sync test'
+        }
+      };
+
+      await this.updateGist(testData);
+      console.log('✅ GitHub 쓰기 테스트 성공');
+
+      // 테스트 데이터 읽기
+      const retrieved = await this.fetchGist();
+      console.log('✅ GitHub 읽기 테스트 성공', retrieved);
+
+      return true;
+    } catch (error) {
+      console.error('❌ 동기화 테스트 실패:', error);
+      return false;
     }
   }
 
@@ -466,4 +531,10 @@ export const forceServerSync = async () => {
   return await adminSyncManager.loadFromServer();
 };
 
+// 동기화 테스트 함수 노출
+export const testGitHubSync = async () => {
+  return await adminSyncManager.testSync();
+};
+
 console.log('✅ 완벽한 관리자 실시간 동기화 시스템 로드 완료');
+console.log('🌐 GitHub 동기화 상태:', adminSyncManager.isGitHubConfigured() ? '활성화' : '비활성화');
