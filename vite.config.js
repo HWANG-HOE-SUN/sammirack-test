@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/sammirack-estimator/', // GitHub Pages 저장소 이름에 맞게 수정
+  base: '/sammirack-test/', // GitHub Pages 저장소 이름에 맞게 수정
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
