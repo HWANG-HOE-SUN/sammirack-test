@@ -1,0 +1,289 @@
+/* src/styles/MaterialPriceManager.css */
+
+.material-price-manager-container {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Malgun Gothic', sans-serif;
+}
+
+/* 헤더 영역 */
+.material-price-manager-container h3 {
+  margin: 0;
+  color: #495057;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* 검색 입력창 */
+.material-price-manager-container input[type="text"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.material-price-manager-container input[type="text"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* 테이블 컨테이너 */
+.material-price-table-container {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background-color: white;
+  /* 스크롤 항상 표시 */
+  scrollbar-width: thin;
+  scrollbar-color: #6c757d #f1f3f4;
+}
+
+.material-price-table-container::-webkit-scrollbar {
+  width: 16px; /* 기존 14px에서 16px로 확대 */
+  height: 16px;
+}
+
+.material-price-table-container::-webkit-scrollbar-track {
+  background: #e9ecef; /* 더 진한 색으로 변경 */
+  border-radius: 8px;
+  border: 2px solid #dee2e6; /* 테두리 두께 증가 */
+}
+
+.material-price-table-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #495057 0%, #343a40 100%); /* 더 진한 색상 */
+  border-radius: 8px;
+  border: 2px solid #e9ecef; /* 테두리 두께 증가 */
+  box-shadow: inset 0 0 4px rgba(0,0,0,0.3); /* 그림자 강화 */
+  min-height: 40px; /* 최소 높이 추가 */
+}
+
+.material-price-table-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #343a40 0%, #212529 100%); /* 호버시 더 진함 */
+}
+
+.material-price-table-container::-webkit-scrollbar-corner {
+  background: #e9ecef;
+  border: 2px solid #dee2e6;
+}
+
+/* 테이블 스타일 */
+.material-price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 800px; /* 최소 너비 보장 */
+}
+
+.material-price-table th {
+  padding: 10px 6px; /* 좌우 간격 줄임 */
+  text-align: left;
+  border-right: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.material-price-table td {
+  padding: 8px 6px; /* 좌우 간격 줄임 */
+  border-right: 1px solid #f1f3f4;
+  border-bottom: 1px solid #f1f3f4;
+  vertical-align: top;
+}
+
+/* Firefox 스크롤바 */
+.material-price-table-container {
+  scrollbar-width: thick; /* auto에서 thick으로 변경 */
+  scrollbar-color: #495057 #e9ecef; /* 더 진한 색상 */
+}
+
+/* 컬럼별 너비 조정 */
+.material-price-table th:nth-child(1),
+.material-price-table td:nth-child(1) {
+  width: 100px; /* 랙타입 */
+}
+
+.material-price-table th:nth-child(2),
+.material-price-table td:nth-child(2) {
+  min-width: 150px; /* 부품명 */
+}
+
+.material-price-table th:nth-child(3),
+.material-price-table td:nth-child(3) {
+  width: 110px; /* 규격 */
+}
+
+.material-price-table th:nth-child(4),
+.material-price-table td:nth-child(4) {
+  width: 80px; /* 기본단가 */
+  text-align: right;
+}
+
+.material-price-table th:nth-child(5),
+.material-price-table td:nth-child(5) {
+  width: 80px; /* 적용단가 */
+  text-align: right;
+}
+
+.material-price-table th:nth-child(6),
+.material-price-table td:nth-child(6) {
+  width: 60px; /* 상태 */
+  text-align: center;
+}
+
+.material-price-table th:nth-child(7),
+.material-price-table td:nth-child(7) {
+  width: 70px; /* 관리 */
+  text-align: center;
+}
+
+/* 행 호버 효과 */
+.material-price-table tbody tr:hover {
+  background-color: #e3f2fd !important;
+}
+
+/* 빈 상태 스타일 */
+.material-price-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* 안내 정보 박스 */
+.material-price-info-box {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #e7f3ff;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0c5aa6;
+  border: 1px solid #b8daff;
+  flex: 0 0 auto;
+}
+
+.material-price-info-box div {
+  margin-bottom: 2px;
+}
+
+.material-price-info-box div:last-child {
+  margin-bottom: 0;
+}
+
+/* 버튼 스타일 */
+.material-price-edit-button {
+  padding: 4px 8px;
+  font-size: 11px;
+  border: 1px solid #007bff;
+  background-color: #007bff;
+  color: white;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.material-price-edit-button:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.material-price-edit-button:active {
+  transform: translateY(1px);
+}
+
+/* 상태 배지 */
+.material-price-status-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.material-price-status-modified {
+  background-color: #dc3545;
+  color: white;
+}
+
+.material-price-status-default {
+  color: #6c757d;
+}
+
+/* 가격 표시 */
+.material-price-amount {
+  font-weight: 600;
+}
+
+.material-price-amount.modified {
+  color: #dc3545;
+}
+
+.material-price-amount.default {
+  color: #28a745;
+}
+
+.material-price-amount.unset {
+  color: #6c757d;
+}
+
+/* 로딩 상태 */
+.material-price-loading {
+  padding: 40px 20px;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* 새로고침 버튼 */
+.material-price-refresh-button {
+  padding: 6px 12px;
+  font-size: 12px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.material-price-refresh-button:not(:disabled) {
+  background-color: #007bff;
+  color: white;
+}
+
+.material-price-refresh-button:not(:disabled):hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.material-price-refresh-button:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .material-price-manager-container {
+    padding: 12px;
+    max-height: 400px;
+  }
+  
+  .material-price-table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+  
+  .material-price-table th,
+  .material-price-table td {
+    padding: 6px 4px;
+  }
+}

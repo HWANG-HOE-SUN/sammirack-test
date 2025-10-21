@@ -1,0 +1,19 @@
+# 빌드 결과물 (자동 배포 시스템이 생성하므로 Git은 무시)
+/dist
+
+# Node.js 의존성 폴더
+/node_modules
+
+# Vite 개발 환경 캐시
+.vite/
+
+# 운영체제 관련 파일
+.DS_Store
+Thumbs.db
+
+# 환경 변수 파일
+.env
+.env.*
+
+# 로그 파일
+*.log

@@ -1,0 +1,98 @@
+/* BOM Display Styles */
+.bom-display {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.bom-display.compact {
+  margin: 10px 0;
+  padding: 10px;
+}
+
+.bom-display h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.bom-display.compact h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+}
+
+.bom-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+.bom-table th,
+.bom-table td {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.bom-display.compact .bom-table th,
+.bom-display.compact .bom-table td {
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+.bom-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.bom-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.bom-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.bom-notes {
+  font-size: 13px;
+  color: #666;
+  margin-top: 10px;
+}
+
+.bom-display.compact .bom-notes {
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+.bom-notes p {
+  margin: 5px 0;
+}
+
+@media print {
+  .bom-display {
+    border: none;
+    background-color: white;
+    padding: 0;
+    margin: 10px 0;
+  }
+  
+  .bom-table {
+    width: 100%;
+  }
+  
+  .bom-table th,
+  .bom-table td {
+    border: 1px solid #000;
+  }
+  
+  .bom-table th {
+    background-color: #eee !important;
+  }
+}

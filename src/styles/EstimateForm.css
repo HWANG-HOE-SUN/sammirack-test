@@ -1,0 +1,246 @@
+/* EstimateForm.css - 견적서 작성/프린트 전체 스타일 (수량 열 가독성 개선 버전) */
+
+.estimate-form-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Malgun Gothic', Arial, sans-serif;
+  background: #fff;
+  min-height: 100vh;
+}
+
+.memo-narrow { max-width: 100%; }
+
+.estimate-memo {
+  width: 100%;
+  min-height: 60px;
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.form-header h1 {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 0;
+  text-align: center;
+}
+
+.form-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.form-table th,
+.form-table td {
+  border: 1px solid #333;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+.form-table th { background:#f8f9fa; font-weight:bold; }
+.form-table .label {
+  background:#f0f0f0;
+  font-weight:bold;
+  text-align:center;
+  width:120px;
+}
+.form-table .right { text-align:right; }
+.form-table .left { text-align:left; }
+
+.info-table-stamp-wrapper { position: relative; }
+.rep-cell { position: relative; }
+
+.ceo-inline { position: relative; display:inline-block; padding-right:110px; line-height:1; }
+.stamp-inline {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 95px;
+  max-width:95px;
+  max-height:95px;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  opacity: 0.92;
+}
+.ceo-name { font-weight: 600; }
+
+.memo-cell textarea,
+.memo-cell .estimate-memo {
+  height: 100%;
+  min-height: 90px;
+  border: none;
+  resize: vertical;
+}
+
+/* 작성 화면 품목 테이블 */
+.quote-table { table-layout: auto; }
+.quote-table th:nth-child(1) { width:42px; }
+.quote-table th:nth-child(2) { width:auto; }
+.quote-table th:nth-child(3) { width:48px; }
+.quote-table th:nth-child(4) { width:55px; }
+.quote-table th:nth-child(5) { width:78px; }
+.quote-table th:nth-child(6) { width:88px; }
+.quote-table th:nth-child(7) { width:70px; }
+.quote-table th:nth-child(8) { width:60px; }
+
+.quote-table th,
+.quote-table td { word-break:break-word; }
+
+.quote-table td input {
+  width:100%;
+  box-sizing:border-box;
+  font-size:13px;
+  padding:4px 6px;
+}
+
+.total-table .label {
+  background:#f0f0f0;
+  font-weight:bold;
+  width:120px;
+}
+
+.notes-section textarea {
+  width:100%;
+  box-sizing:border-box;
+  padding:8px;
+  font-size:14px;
+  line-height:1.4;
+  resize:vertical;
+}
+
+.info-table td { padding:4px 6px; }
+
+.form-actions {
+  margin-top:20px;
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+.form-actions button {
+  padding:10px 20px;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* PRINT */
+@media print {
+  .no-print { display:none !important; }
+  @page { size:A4; margin:10mm 8mm 10mm; }
+
+  .estimate-form-container {
+    max-width:100% !important;
+    width:100% !important;
+    padding:8mm 8mm 6mm !important;
+    margin:0 !important;
+    background:#fff !important;
+    min-height:auto !important;
+    box-sizing:border-box;
+    font-size:11px !important;
+    line-height:1.25 !important;
+  }
+  /* 도장 이미지 프린트 시 제대로 표시 */
+  .rep-cell {
+    position: relative !important;
+    overflow: visible !important;
+  }
+  
+  .stamp-inline {
+    position: absolute !important;
+    top: -15px !important;
+    right: -30px !important;
+    width: 80px !important;
+    height: 80px !important;
+    z-index: 999 !important;
+    opacity: 0.8 !important;
+    /* 이미지가 안 보일 때 대체 처리 */
+    content: url('./images/도장.png') !important;
+  }
+  
+  /* 도장 이미지 로드 실패 시 대체 방법 */
+  .stamp-inline[src*="도장.png"] {
+    background: url('./images/도장.png') no-repeat center !important;
+    background-size: contain !important;
+  }
+  
+  .form-header h1 { font-size:20px !important; margin-bottom:6px !important; }
+
+  .form-table {
+    font-size:11px !important;
+    margin-bottom:10px !important;
+  }
+  .form-table th,
+  .form-table td {
+    padding:4px 3px !important;
+    line-height:1.2 !important;
+  }
+  input, textarea {
+    border:none !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    outline:none !important;
+    font-size:11px !important;
+    padding:2px 2px !important;
+  }
+  .total-table {
+    width:240px !important;
+    margin-bottom:8px !important;
+  }
+  .form-company {
+    margin-top:20px !important;
+    padding-top:10px !important;
+    font-size:14px !important;
+  }
+  .quote-table,
+  .total-table { page-break-inside:auto !important; }
+  body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+  /* ==== 최종 프린트 비율  ====
+     NO 5 | 품명 41.5 | 단위 13 | 수량 4.5 | 단가 11 | 공급가 11 | 비고 11 | 작업 3 */
+  .quote-table { table-layout:fixed !important; width:100% !important; }
+  .quote-table th, .quote-table td { font-size:11px !important; }
+
+  .quote-table th:nth-child(1), .quote-table td:nth-child(1) { width:5% !important; }
+  .quote-table th:nth-child(2), .quote-table td:nth-child(2) { width:41.5% !important; }
+  .quote-table th:nth-child(3), .quote-table td:nth-child(3) { width:13% !important; }
+  .quote-table th:nth-child(4), .quote-table td:nth-child(4) { width:4.5% !important; min-width:12px !important; white-space:nowrap !important; }
+  .quote-table th:nth-child(5), .quote-table td:nth-child(5) { width:11% !important; min-width:70px !important; }
+  .quote-table th:nth-child(6), .quote-table td:nth-child(6) { width:11% !important; min-width:60px !important; }
+  .quote-table th:nth-child(7), .quote-table td:nth-child(7) { width:11% !important; min-width:60px !important; }
+  .quote-table th:nth-child(8), .quote-table td:nth-child(8) { width:3% !important; min-width:28px !important; }
+
+  /* 수량/단가/공급가 열 가독성 */
+  .quote-table th:nth-child(5),
+  .quote-table th:nth-child(6),
+  .quote-table th:nth-child(7),
+  .quote-table td:nth-child(5),
+  .quote-table td:nth-child(6),
+  .quote-table td:nth-child(7) {
+    white-space:nowrap !important;
+    font-feature-settings:'tnum' 1;
+    text-align:right !important;
+    padding:2px 6px !important;
+    letter-spacing:0 !important;
+  }
+  /* 수량 헤더 줄바꿈 방지 */
+  .quote-table th:nth-child(5) { text-align:center !important; }
+
+  .quote-table th, .quote-table td {
+    word-break:break-word !important;
+  }
+
+  /* 폭 문제 해결 - 페이지 넘어가지 않도록 */
+  .estimate-form-container {
+    transform: scale(0.90) !important;
+    transform-origin: top left !important;
+  }
+
+
+  /* 필요시 더 넓히려면: 수량 16%로 올리고 품명 40%로 내리는 식으로 조정 가능 */
+}

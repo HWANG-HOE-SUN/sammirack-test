@@ -1,0 +1,143 @@
+{
+  "하이랙": {
+    "추가상품1 (270kg 매트그레이 선반추가)": [
+      { "id": "h1-45x108-gray-shelf", "name": "45x108 매트그레이선반", "price": 17000, "bom": [{ "name": "45x108 매트그레이선반", "qty": 1 }] },
+      { "id": "h1-45x150-gray-shelf", "name": "45x150 매트그레이선반", "price": 20000, "bom": [{ "name": "45x150 매트그레이선반", "qty": 1 }] },
+      { "id": "h1-45x200-gray-shelf", "name": "45x200 매트그레이선반", "price": 22000, "bom": [{ "name": "45x200 매트그레이선반", "qty": 1 }] },
+      { "id": "h1-60x108-gray-shelf", "name": "60x108 매트그레이선반", "price": 20000, "bom": [{ "name": "60x108 매트그레이선반", "qty": 1 }] },
+      { "id": "h1-60x150-gray-shelf", "name": "60x150 매트그레이선반", "price": 23000, "bom": [{ "name": "60x150 매트그레이선반", "qty": 1 }] },
+      { "id": "h1-60x200-gray-shelf", "name": "60x200 매트그레이선반", "price": 25000, "bom": [{ "name": "60x200 매트그레이선반", "qty": 1 }] }
+    ],
+    "추가상품2 (270kg 오렌지 선반추가)": [
+      { "id": "h2-45x108-orange-shelf", "name": "45x108 오렌지선반", "price": 17000, "bom": [{ "name": "45x108 오렌지선반", "qty": 1 }] },
+      { "id": "h2-45x150-orange-shelf", "name": "45x150 오렌지선반", "price": 20000, "bom": [{ "name": "45x150 오렌지선반", "qty": 1 }] },
+      { "id": "h2-45x200-orange-shelf", "name": "45x200 오렌지선반", "price": 22000, "bom": [{ "name": "45x200 오렌지선반", "qty": 1 }] },
+      { "id": "h2-60x108-orange-shelf", "name": "60x108 오렌지선반", "price": 20000, "bom": [{ "name": "60x108 오렌지선반", "qty": 1 }] },
+      { "id": "h2-60x150-orange-shelf", "name": "60x150 오렌지선반", "price": 23000, "bom": [{ "name": "60x150 오렌지선반", "qty": 1 }] },
+      { "id": "h2-60x200-orange-shelf", "name": "60x200 오렌지선반", "price": 25000, "bom": [{ "name": "60x200 오렌지선반", "qty": 1 }] }
+    ],
+    "추가상품3 (270kg 기둥추가)": [
+      { "id": "h3-45x150-blue-pillar", "name": "45x150(블루기둥)", "price": 21000, "bom": [{ "name": "45x150 블루기둥", "qty": 1 }] },
+      { "id": "h3-45x200-blue-pillar", "name": "45x200(블루기둥)", "price": 23000, "bom": [{ "name": "45x200 블루기둥", "qty": 1 }] },
+      { "id": "h3-60x150-blue-pillar", "name": "60x150(블루기둥)", "price": 23000, "bom": [{ "name": "60x150 블루기둥", "qty": 1 }] },
+      { "id": "h3-60x200-blue-pillar", "name": "60x200(블루기둥)", "price": 25000, "bom": [{ "name": "60x200 블루기둥", "qty": 1 }] },
+      { "id": "h3-45x150-gray-pillar", "name": "45x150(메트그레이기둥)", "price": 21000, "bom": [{ "name": "45x150 메트그레이기둥", "qty": 1 }] },
+      { "id": "h3-45x200-gray-pillar", "name": "45x200(메트그레이기둥)", "price": 23000, "bom": [{ "name": "45x200 메트그레이기둥", "qty": 1 }] },
+      { "id": "h3-60x150-gray-pillar", "name": "60x150(메트그레이기둥)", "price": 23000, "bom": [{ "name": "60x150 메트그레이기둥", "qty": 1 }] },
+      { "id": "h3-60x200-gray-pillar", "name": "60x200(메트그레이기둥)", "price": 25000, "bom": [{ "name": "60x200 메트그레이기둥", "qty": 1 }] }
+    ],
+    "추가상품4 (450kg 메트그레이 기둥 및 선반추가)": [
+      { "id": "h4-60x108-gray-450-shelf", "name": "60x108(선반추가 450kg)", "price": 25000, "bom": [{ "name": "60x108 선반(450kg)", "qty": 1 }] },
+      { "id": "h4-60x150-gray-450-shelf", "name": "60x150(선반추가 450kg)", "price": 30000, "bom": [{ "name": "60x150 선반(450kg)", "qty": 1 }] },
+      { "id": "h4-60x200-gray-450-shelf", "name": "60x200(선반추가 450kg)", "price": 35500, "bom": [{ "name": "60x200 선반(450kg)", "qty": 1 }] },
+      { "id": "h4-60x150-gray-450-pillar", "name": "60x150(기둥추가 450kg)", "price": 39000, "bom": [{ "name": "60x150 기둥(450kg)", "qty": 1 }] },
+      { "id": "h4-60x200-gray-450-pillar", "name": "60x200(기둥추가 450kg)", "price": 41000, "bom": [{ "name": "60x200 기둥(450kg)", "qty": 1 }] },
+      { "id": "h4-60x250-gray-450-pillar", "name": "60x250(기둥추가 450kg)", "price": 43000, "bom": [{ "name": "60x250 기둥(450kg)", "qty": 1 }] }
+    ],
+    "추가상품5 (450kg 블루+오렌지 기둥 및 선반추가)": [
+      { "id": "h5-60x108-orange-450-shelf", "name": "60x108(선반추가 450kg)", "price": 25000, "bom": [{ "name": "60x108 선반(450kg)", "qty": 1 }] },
+      { "id": "h5-60x150-orange-450-shelf", "name": "60x150(선반추가 450kg)", "price": 30000, "bom": [{ "name": "60x150 선반(450kg)", "qty": 1 }] },
+      { "id": "h5-60x200-orange-450-shelf", "name": "60x200(선반추가 450kg)", "price": 35500, "bom": [{ "name": "60x200 선반(450kg)", "qty": 1 }] },
+      { "id": "h5-60x150-orange-450-pillar", "name": "60x150(기둥추가 450kg)", "price": 39000, "bom": [{ "name": "60x150 기둥(450kg)", "qty": 1 }] },
+      { "id": "h5-60x200-orange-450-pillar", "name": "60x200(기둥추가 450kg)", "price": 41000, "bom": [{ "name": "60x200 기둥(450kg)", "qty": 1 }] },
+      { "id": "h5-60x250-orange-450-pillar", "name": "60x250(기둥추가 450kg)", "price": 43000, "bom": [{ "name": "60x250 기둥(450kg)", "qty": 1 }] }     
+    ],
+    "추가상품6 (600kg 블루+오렌지 단추가)": [
+      { "id": "h6-80x108-blue-700-shelf", "name": "80x108(블루선반+오렌지빔)", "price": 81000, "bom": [{ "name": "80x108 블루선반+오렌지빔", "qty": 1 }] },
+      { "id": "h6-80x150-blue-700-shelf", "name": "80x150(블루선반+오렌지빔)", "price": 122000, "bom": [{ "name": "80x150 블루선반+오렌지빔", "qty": 1 }] },
+      { "id": "h6-80x200-blue-700-shelf", "name": "80x200(블루선반+오렌지빔)", "price": 158000, "bom": [{ "name": "80x200 블루선반+오렌지빔", "qty": 1 }] }
+    ]
+  },
+  "스텐랙": {
+    "추가상품1 (선반추가(단위cm) 폭x길이)": [
+      { "id": "s1-50x75-shelf", "name": "50x75", "price": 40000, "bom": [{ "name": "50x75 선반", "qty": 1 }] },
+      { "id": "s1-50x90-shelf", "name": "50x90", "price": 45000, "bom": [{ "name": "50x90 선반", "qty": 1 }] },
+      { "id": "s1-50x120-shelf", "name": "50x120", "price": 52000, "bom": [{ "name": "50x120 선반", "qty": 1 }] },
+      { "id": "s1-50x150-shelf", "name": "50x150", "price": 69000, "bom": [{ "name": "50x150 선반", "qty": 1 }] },
+      { "id": "s1-50x180-shelf", "name": "50x180", "price": 73000, "bom": [{ "name": "50x180 선반", "qty": 1 }] }
+    ],
+    "추가상품2 (기둥추가(단위cm))": [
+      { "id": "s2-75-pillar", "name": "75(4개 1set)", "price": 26000, "bom": [{ "name": "75 기둥", "qty": 4 }] },
+      { "id": "s2-90-pillar", "name": "90(4개 1set)", "price": 28000, "bom": [{ "name": "90 기둥", "qty": 4 }] },
+      { "id": "s2-120-pillar", "name": "120(4개 1set)", "price": 35000, "bom": [{ "name": "120 기둥", "qty": 4 }] },
+      { "id": "s2-150-pillar", "name": "150(4개 1set)", "price": 41000, "bom": [{ "name": "150 기둥", "qty": 4 }] },
+      { "id": "s2-180-pillar", "name": "180(4개 1set)", "price": 50000, "bom": [{ "name": "180 기둥", "qty": 4 }] },
+      { "id": "s2-210-pillar", "name": "210(4개 1set)", "price": 53000, "bom": [{ "name": "210 기둥", "qty": 4 }] }
+    ]
+  },
+  "중량랙": {
+    "추가상품1 (선반 추가)": [
+      { "id": "m1-45x95-shelf", "name": "45x95", "price": 18000, "bom": [{ "name": "45x95 선반", "qty": 1 }] },
+      { "id": "m1-45x125-shelf", "name": "45x125", "price": 22000, "bom": [{ "name": "45x125 선반", "qty": 1 }] },
+      { "id": "m1-45x155-shelf", "name": "45x155", "price": 28000, "bom": [{ "name": "45x155 선반", "qty": 1 }] },
+      { "id": "m1-45x185-shelf", "name": "45x185", "price": 32000, "bom": [{ "name": "45x185 선반", "qty": 1 }] },
+      { "id": "m1-60x95-shelf", "name": "60x95", "price": 20000, "bom": [{ "name": "60x95 선반", "qty": 1 }] },
+      { "id": "m1-60x125-shelf", "name": "60x125", "price": 28000, "bom": [{ "name": "60x125 선반", "qty": 1 }] },
+      { "id": "m1-60x155-shelf", "name": "60x155", "price": 34000, "bom": [{ "name": "60x155 선반", "qty": 1 }] },
+      { "id": "m1-60x185-shelf", "name": "60x185", "price": 44000, "bom": [{ "name": "60x185 선반", "qty": 1 }] },
+      { "id": "m1-90x95-shelf", "name": "90x95", "price": 38000, "bom": [{ "name": "90x95 선반", "qty": 1 }] },
+      { "id": "m1-90x125-shelf", "name": "90x125", "price": 46000, "bom": [{ "name": "90x125 선반", "qty": 1 }] },
+      { "id": "m1-90x155-shelf", "name": "90x155", "price": 54000, "bom": [{ "name": "90x155 선반", "qty": 1 }] },
+      { "id": "m1-90x185-shelf", "name": "90x185", "price": 64000, "bom": [{ "name": "90x185 선반", "qty": 1 }] }
+    ],
+    "추가상품2 (중량 바퀴 추가)": [
+      { "id": "m2-heavy-wheels", "name": "4개 1set", "price": 75000, "bom": [{ "name": "중량바퀴", "qty": 4 }] }
+    ]
+  },
+  "파렛트랙": {
+    "추가상품1 (로드빔1460 1단추가(타이빔2포함))": [
+      { "id": "p1-loadbeam-1460", "name": "로드빔1460 1단추가(타이빔2포함)", "price": 58000, "bom": [{ "name": "로드빔1460", "qty": 1 }] }
+    ],
+    "추가상품2 (로드빔2660 1단추가(타이빔4포함))": [
+      { "id": "p2-loadbeam-2660", "name": "로드빔2660 1단추가(타이빔4포함)", "price": 100000, "bom": [{ "name": "로드빔2660", "qty": 1 }] }
+    ],
+    "추가상품3 (로드빔+철판형 990kg 1단추가)": [
+      { "id": "p3-steel-1460", "name": "1460 (철판형 1단)", "price": 95000, "bom": [{ "name": "철판형 1460", "qty": 1 }] },
+      { "id": "p3-steel-2060", "name": "2060 (철판형 1단)", "price": 143000, "bom": [{ "name": "철판형 2060", "qty": 1 }] },
+      { "id": "p3-steel-2660", "name": "2660 (철판형 1단)", "price": 185000, "bom": [{ "name": "철판형 2660", "qty": 1 }] }
+    ],
+    "추가상품4 (로드빔+철판형 550kg 1단추가)": [
+      { "id": "p4-steel-1460", "name": "1460 (철판형 1단)", "price": 81000, "bom": [{ "name": "철판형 1460", "qty": 1 }] },
+      { "id": "p4-steel-2060", "name": "2060 (철판형 1단)", "price": 122000, "bom": [{ "name": "철판형 2060", "qty": 1 }] },
+      { "id": "p4-steel-2660", "name": "2660 (철판형 1단)", "price": 158000, "bom": [{ "name": "철판형 2660", "qty": 1 }] }
+    ],
+    "추가상품5 (타이빔)": [
+      { "id": "p5-tie-beam-1010", "name": "1010", "price": 7000, "bom": [{ "name": "타이빔 1010", "qty": 1 }] }
+    ],
+    "추가상품6 (합판추가)": [
+      { "id": "p6-plywood-normal", "name": "1000x2440(12mm)일반합판", "price": 30000, "bom": [{ "name": "일반합판 1000x2440", "qty": 1 }] },
+      { "id": "p6-plywood-walnut", "name": "1000x2440(12mm)월넛코팅판", "price": 35000, "bom": [{ "name": "월넛코팅판 1000x2440", "qty": 1 }] },
+      { "id": "p6-plywood-darkgray", "name": "1000x2440(12mm)돌그레이코팅판", "price": 35000, "bom": [{ "name": "돌그레이코팅판 1000x2440", "qty": 1 }] },
+      { "id": "p6-plywood-white", "name": "1000x2440(12mm)화이트코팅판", "price": 35000, "bom": [{ "name": "화이트코팅판 1000x2440", "qty": 1 }] }
+    ]
+  },
+    "파렛트랙 철판형": {
+    "추가상품1 (로드빔1460 1단추가(철판2포함))": [
+      { "id": "p1-loadbeam-1460", "name": "로드빔1460 1단추가(철판2포함)", "price": 58000, "bom": [{ "name": "로드빔1460", "qty": 1 }] }
+    ],
+    "추가상품2 (로드빔2660 1단추가(철판3포함))": [
+      { "id": "p2-loadbeam-2660", "name": "로드빔2660 1단추가(철판3포함)", "price": 100000, "bom": [{ "name": "로드빔2660", "qty": 1 }] }
+    ],
+    "추가상품3 (로드빔+철판형 990kg 1단추가)": [
+      { "id": "p3-steel-1460", "name": "1460 (철판형 1단)", "price": 95000, "bom": [{ "name": "철판형 1460", "qty": 1 }] },
+      { "id": "p3-steel-2060", "name": "2060 (철판형 1단)", "price": 143000, "bom": [{ "name": "철판형 2060", "qty": 1 }] },
+      { "id": "p3-steel-2660", "name": "2660 (철판형 1단)", "price": 185000, "bom": [{ "name": "철판형 2660", "qty": 1 }] }
+    ],
+    "추가상품4 (로드빔+철판형 550kg 1단추가)": [
+      { "id": "p4-steel-1460", "name": "1460 (철판형 1단)", "price": 81000, "bom": [{ "name": "철판형 1460", "qty": 1 }] },
+      { "id": "p4-steel-2060", "name": "2060 (철판형 1단)", "price": 122000, "bom": [{ "name": "철판형 2060", "qty": 1 }] },
+      { "id": "p4-steel-2660", "name": "2660 (철판형 1단)", "price": 158000, "bom": [{ "name": "철판형 2660", "qty": 1 }] }
+    ],
+    "추가상품5 (합판추가)": [
+      { "id": "p6-plywood-normal", "name": "1000x2440(12mm)일반합판", "price": 30000, "bom": [{ "name": "일반합판 1000x2440", "qty": 1 }] },
+      { "id": "p6-plywood-walnut", "name": "1000x2440(12mm)월넛코팅판", "price": 35000, "bom": [{ "name": "월넛코팅판 1000x2440", "qty": 1 }] },
+      { "id": "p6-plywood-darkgray", "name": "1000x2440(12mm)돌그레이코팅판", "price": 35000, "bom": [{ "name": "돌그레이코팅판 1000x2440", "qty": 1 }] },
+      { "id": "p6-plywood-white", "name": "1000x2440(12mm)화이트코팅판", "price": 35000, "bom": [{ "name": "화이트코팅판 1000x2440", "qty": 1 }] }
+    ]
+  },
+  "경량랙": {
+    "기타자재": [
+      { "id": "l1-custom", "name": "기타자재(사용자직접입력)", "price": 0, "bom": [{ "name": "기타자재", "qty": 1 }] }
+    ]
+  }
+}

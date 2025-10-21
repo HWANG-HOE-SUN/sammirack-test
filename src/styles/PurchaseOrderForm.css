@@ -1,0 +1,457 @@
+/* PurchaseOrderForm.css - 거래명세서 / 청구서 전체 스타일 (흑백 기반) */
+
+.purchase-order-form-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Malgun Gothic', Arial, sans-serif;
+  background: white;
+  min-height: 100vh;
+}
+
+.estimate-memo {
+  min-height: 28px;
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 6px 8px;
+}
+.memo-narrow { max-width: 100%; }
+
+.excel-btn { white-space: nowrap; }
+
+img[alt="도장"] {
+  max-width: 240px;
+  max-height: 240px;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+.form-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #222;
+}
+.form-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  flex: 1;
+}
+
+.form-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.form-table th,
+.form-table td {
+  border: 1px solid #333;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+.form-table th { background: #f8f9fa; font-weight: bold; }
+.form-table .label {
+  background: #f0f0f0;
+  font-weight: bold;
+  text-align: center;
+  width: 120px;
+}
+.form-table .left { text-align: left; }
+.form-table .right { text-align: right; }
+
+.info-table { margin-bottom: 30px; }
+.info-table td { padding: 8px; }
+.info-table input {
+  width: 100%;
+  max-width: 98%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.info-table-stamp-wrapper { position: relative; }
+.rep-cell { position: relative; }
+
+.stamp-overlay {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translate(-45%,-50%);
+  max-width: 120px;
+  max-height: 120px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.ceo-name { font-weight: 600; }
+
+.ceo-inline { position: relative; display: inline-block; padding-right: 110px; line-height: 1; }
+.stamp-inline {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 95px;
+  max-width: 95px;
+  max-height: 95px;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  opacity: 0.92;
+}
+
+/* 작성 화면 품목 테이블 */
+.order-table { table-layout: fixed; width: 100%; }
+.order-table th,
+.order-table td { word-break: break-word; white-space: normal; }
+
+.order-table th:nth-child(1) { width: 42px; }
+.order-table th:nth-child(2) { width: auto; }
+.order-table th:nth-child(3) { width: 70px; }
+.order-table th:nth-child(4) { width: 40px; }
+.order-table th:nth-child(5) { width: 90px; }
+.order-table th:nth-child(6) { width: 100px; }
+.order-table th:nth-child(7) { width: 110px; }
+.order-table th:nth-child(8) { width: 60px; }
+
+.order-table td input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.order-table input[type=number] { text-align: right; }
+
+/* 작성 화면 BOM 비율 (작성시 그대로) */
+.bom-table { table-layout: fixed; width: 100%; }
+.bom-table th,
+.bom-table td { word-break: break-word; white-space: normal; }
+.bom-table th:nth-child(1), .bom-table td:nth-child(1) { width: 5% !important; }
+.bom-table th:nth-child(2), .bom-table td:nth-child(2) { width: 32% !important; }
+.bom-table th:nth-child(3), .bom-table td:nth-child(3) { width: 30% !important; }
+.bom-table th:nth-child(4), .bom-table td:nth-child(4) { width: 7% !important; }
+.bom-table th:nth-child(5), .bom-table td:nth-child(5) { width: 7% !important; }
+.bom-table th:nth-child(6), .bom-table td:nth-child(6) { width: 8% !important; }
+.bom-table th:nth-child(7), .bom-table td:nth-child(7) { width: 11% !important; }
+.bom-table th:nth-child(8), .bom-table td:nth-child(8) { width: 70px !important; }
+
+.bom-table td input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.bom-table input[type=number] { text-align: right; }
+
+.remove-btn {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.remove-btn:hover { background: #c82333; }
+.remove-btn:disabled { background: #6c757d; cursor: not-allowed; }
+
+.item-controls { text-align: center; margin-bottom: 30px; }
+
+.add-item-btn,
+.add-material-btn {
+  background: #28a745;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: bold;
+  margin: 0 10px;
+}
+.add-item-btn:hover,
+.add-material-btn:hover { background: #218838; }
+.add-material-btn { background: #17a2b8; }
+.add-material-btn:hover { background: #138496; }
+
+.total-table {
+  width: 300px;
+  margin-left: auto;
+  margin-bottom: 30px;
+}
+.total-table .label {
+  width: 100px;
+  background: #f8f9fa;
+}
+.total-table td:last-child {
+  text-align: right;
+  font-weight: bold;
+  padding-right: 15px;
+}
+
+.notes-section { margin-bottom: 30px; }
+.notes-section label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.notes-section textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.form-actions {
+  text-align: center;
+  margin: 40px 0;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+.save-btn,
+.print-btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  min-width: 120px;
+}
+.save-btn { background: #007bff; color: #fff; }
+.save-btn:hover { background: #0056b3; }
+.print-btn { background: #6c757d; color: #fff; }
+.print-btn:hover { background: #545b62; }
+
+.excel-btn {
+  background: #28a745;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color .3s;
+  margin-right: 10px;
+}
+.excel-btn:hover { background: #218838; }
+.excel-btn:active { background: #1e7e34; }
+.excel-btn:disabled { background: #6c757d; cursor: not-allowed; }
+
+.form-company {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
+}
+
+@media (max-width: 768px) {
+  .purchase-order-form-container { padding: 10px; }
+  .form-header { flex-direction: column; gap: 15px; }
+  .form-table { font-size: 12px; }
+  .order-table th,
+  .order-table td,
+  .bom-table th,
+  .bom-table td { padding: 4px; }
+  .order-table td input,
+  .bom-table td input { padding: 4px 6px; font-size: 12px; }
+  .form-actions { flex-direction: column; gap: 10px; }
+  .item-controls { display: flex; flex-direction: column; gap: 10px; }
+  .add-item-btn,
+  .add-material-btn { margin: 0; }
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.order-table .right,
+.bom-table .right {
+  background: #f8f9fa;
+  font-weight: bold;
+  color: #495057;
+}
+
+.order-table { border: 2px solid #333; }
+.bom-table { border: 2px solid #333; }
+
+/* PRINT */
+@media print {
+  html, body { height: auto !important; min-height: auto !important; overflow: visible !important; }
+  body * { visibility: visible !important; }
+  .no-print { display: none !important; }
+
+  @page { size: A4; margin: 10mm 8mm 10mm; }
+
+  /* 폭 문제 해결 - 페이지 넘어가지 않도록 */
+  .purchase-order-form-container {
+    transform: scale(0.90) !important;
+    transform-origin: top left !important;
+  }
+
+  .purchase-order-form-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 8mm 8mm 6mm !important;
+    margin: 0 !important;
+    background: #fff !important;
+    min-height: auto !important;
+    box-sizing: border-box;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* 도장 이미지 프린트 시 제대로 표시 */
+  .rep-cell {
+    position: relative !important;
+    overflow: visible !important;
+  }
+  
+  .stamp-inline {
+    position: absolute !important;
+    top: -15px !important;
+    right: -30px !important;
+    width: 80px !important;
+    height: 80px !important;
+    z-index: 999 !important;
+    opacity: 0.8 !important;
+    /* 이미지가 안 보일 때 대체 처리 */
+    content: url('./images/도장.png') !important;
+  }
+  
+  /* 도장 이미지 로드 실패 시 대체 방법 */
+  .stamp-inline[src*="도장.png"] {
+    background: url('./images/도장.png') no-repeat center !important;
+    background-size: contain !important;
+  }
+
+  .form-header h1 { font-size: 20px !important; margin-bottom: 6px !important; }
+
+  .form-table {
+    font-size: 11px !important;
+    margin-bottom: 10px !important;
+  }
+  .form-table th,
+  .form-table td {
+    padding: 4px 3px !important;
+    line-height: 1.2 !important;
+  }
+
+  input, textarea {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    font-size: 11px !important;
+    padding: 2px 2px !important;
+  }
+
+  .total-table {
+    width: 240px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .form-company {
+    margin-top: 20px !important;
+    padding-top: 10px !important;
+    font-size: 14px !important;
+  }
+
+  .order-table th:last-child,
+  .order-table td:last-child,
+  .bom-table th:last-child,
+  .bom-table td:last-child { display: none !important; }
+
+  .order-table,
+  .bom-table { page-break-inside: auto !important; }
+  .order-table thead,
+  .bom-table thead { display: table-header-group !important; }
+  .order-table tfoot,
+  .bom-table tfoot { display: table-footer-group !important; }
+
+  .total-table { page-break-inside: avoid !important; }
+
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* ==== 품목 목록 프린트 비율 ==== */
+  .order-table { table-layout: fixed !important; width: 100% !important; }
+  .order-table th:nth-child(1), .order-table td:nth-child(1) { width: 5% !important; }
+  .order-table th:nth-child(2), .order-table td:nth-child(2) { width: 41.5% !important; }
+  .order-table th:nth-child(3), .order-table td:nth-child(3) { width: 11% !important; }
+  .order-table th:nth-child(4), .order-table td:nth-child(4) { width: 5.5% !important; min-width: 12px !important; white-space: nowrap !important; }
+  .order-table th:nth-child(5), .order-table td:nth-child(5) { width: 12% !important; min-width: 70px !important; }
+  .order-table th:nth-child(6), .order-table td:nth-child(6) { width: 11% !important; min-width: 60px !important; }
+  .order-table th:nth-child(7), .order-table td:nth-child(7) { width: 11% !important; min-width: 60px !important; }
+  .order-table th:nth-child(8), .order-table td:nth-child(8) { width: 3% !important; min-width: 28px !important; }
+
+  .order-table th:nth-child(5),
+  .order-table th:nth-child(6),
+  .order-table th:nth-child(7),
+  .order-table td:nth-child(5),
+  .order-table td:nth-child(6),
+  .order-table td:nth-child(7) {
+    white-space: nowrap !important;
+    font-feature-settings: 'tnum' 1;
+    text-align: right !important;
+    padding: 2px 6px !important;
+    letter-spacing: 0 !important;
+  }
+  .order-table th:nth-child(5) { text-align: center !important; }
+
+  /* ==== BOM 프린트 비율 ====
+     NO 5 | 부품명 30 | 규격 26 | 수량 8 | 단가 10 | 금액 11 | 비고 10 */
+  .bom-table { table-layout: fixed !important; width: 100% !important; }
+  .bom-table th:nth-child(1), .bom-table td:nth-child(1) { width: 5% !important; }
+  .bom-table th:nth-child(2), .bom-table td:nth-child(2) { width: 30% !important; }
+  .bom-table th:nth-child(3), .bom-table td:nth-child(3) { width: 26% !important; }
+  .bom-table th:nth-child(4), .bom-table td:nth-child(4) { width: 8% !important; min-width: 70px !important; }
+  .bom-table th:nth-child(5), .bom-table td:nth-child(5) { width: 10% !important; min-width: 55px !important; }
+  .bom-table th:nth-child(6), .bom-table td:nth-child(6) { width: 11% !important; min-width: 55px !important; }
+  .bom-table th:nth-child(7), .bom-table td:nth-child(7) { width: 10% !important; min-width: 55px !important; }
+  .bom-table th:nth-child(8), .bom-table td:nth-child(8) { width: 0% !important; }
+
+  .bom-table th:nth-child(4),
+  .bom-table th:nth-child(5),
+  .bom-table th:nth-child(6),
+  .bom-table th:nth-child(7),
+  .bom-table td:nth-child(4),
+  .bom-table td:nth-child(5),
+  .bom-table td:nth-child(6),
+  .bom-table td:nth-child(7) {
+    white-space: nowrap !important;
+    font-feature-settings: 'tnum' 1;
+    text-align: right !important;
+    padding: 2px 6px !important;
+  }
+
+  .order-table th, .order-table td,
+  .bom-table th, .bom-table td {
+    word-break: break-word !important;
+  }
+}
+
+.info-table td { padding: 4px 6px; }
+.estimate-memo.memo-narrow { min-height: 90px; }
