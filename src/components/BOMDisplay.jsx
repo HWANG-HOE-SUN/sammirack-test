@@ -1,3 +1,5 @@
+// BOMDisplay.jsx 전체 수정 - 안전한 처리
+
 import React, { useState, useEffect } from 'react';
 import { useProducts } from '../contexts/ProductContext';
 import { sortBOMByMaterialRule } from '../utils/materialSort';
@@ -64,19 +66,53 @@ export default function BOMDisplay({ bom, title, currentUser, selectedRackOption
     return getEffectivePrice(item);
   };
 
-  // 단가 수정 버튼 클릭 핸들러
+  // 단가 수정 버튼 클릭 핸들러 - 안전한 처리
   const handleEditPrice = (item) => {
-    const partId = generatePartId(item);
-    const usingOptions = getRackOptionsUsingPart(partId);
+    console.log('🔧 handleEditPrice 호출됨. item:', item);
     
-    // 선택된 랙옵션 정보 추가
-    const itemWithRackInfo = {
-      ...item,
-      partId,
-      displayName: selectedRackOption || `${item.rackType} ${item.specification || ''}`.trim(),
-      usingOptions
+    // item 유효성 검사
+    if (!item) {
+      console.error('❌ item이 undefined입니다.');
+      alert('부품 정보를 가져올 수 없습니다.');
+      return;
+    }
+
+    // 안전한 item 복사본 생성 (rackType 보장)
+    const safeItem = {
+      rackType: item.rackType || '미분류',
+      name: item.name || '부품명없음',
+      specification: item.specification || '',
+      unitPrice: item.unitPrice || 0,
+      quantity: item.quantity || 0,
+      totalPrice: item.totalPrice || 0,
+      ...item // 나머지 속성들 유지
     };
-    setEditingPart(itemWithRackInfo);
+
+    console.log('🔧 안전한 item 생성:', safeItem);
+
+    try {
+      const partId = generatePartId(safeItem);
+      const usingOptions = getRackOptionsUsingPart(partId);
+      
+      // 안전한 displayName 생성
+      const displayName = selectedRackOption || 
+        `${safeItem.rackType} ${safeItem.name} ${safeItem.specification}`.trim();
+      
+      // 선택된 랙옵션 정보 추가
+      const itemWithRackInfo = {
+        ...safeItem,
+        partId,
+        displayName,
+        usingOptions
+      };
+      
+      console.log('✅ 최종 itemWithRackInfo:', itemWithRackInfo);
+      setEditingPart(itemWithRackInfo);
+      
+    } catch (error) {
+      console.error('❌ handleEditPrice 오류:', error);
+      alert('단가 수정 중 오류가 발생했습니다: ' + error.message);
+    }
   };
 
   // 단가 수정 완료 핸들러
@@ -102,8 +138,20 @@ export default function BOMDisplay({ bom, title, currentUser, selectedRackOption
     );
   }
 
+  // BOM 항목들의 rackType 확인 및 수정
+  const safeBom = bom.map((item, index) => {
+    if (!item.rackType) {
+      console.warn(`⚠️ BOM 항목 ${index}에 rackType이 없음:`, item);
+      return {
+        ...item,
+        rackType: '미분류' // 기본값 설정
+      };
+    }
+    return item;
+  });
+
   // 기존 localeCompare 정렬 제거, 사용자 정의 정렬 사용
-  const sortedBom = sortBOMByMaterialRule(bom);
+  const sortedBom = sortBOMByMaterialRule(safeBom);
   const isAdmin = currentUser?.role === 'admin';
 
   return (
@@ -126,7 +174,8 @@ export default function BOMDisplay({ bom, title, currentUser, selectedRackOption
             </thead>
             <tbody>
               {sortedBom.map((item, index) => {
-                const key = `${item.rackType} ${item.size || ''} ${item.name}-${index}`;
+                // 안전한 키 생성
+                const key = `${item.rackType || 'unknown'} ${item.size || ''} ${item.name || 'noname'}-${index}`;
                 const partId = generatePartId(item);
                 const effectiveUnitPrice = getEffectiveUnitPrice(item);
                 const hasAdminPrice = adminPrices[partId] && adminPrices[partId].price > 0;
@@ -142,7 +191,7 @@ export default function BOMDisplay({ bom, title, currentUser, selectedRackOption
                         <div>
                           <strong>{kgLabelFix(item.name)}</strong>
                           <div style={{ fontSize: '12px', color: '#666' }}>
-                            {item.rackType}
+                            {item.rackType || '미분류'}
                           </div>
                         </div>
                         {hasAdminPrice && (
