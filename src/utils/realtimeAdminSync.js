@@ -14,8 +14,8 @@ class RealtimeAdminSyncManager {
     this.isOnline = navigator.onLine;
     
     // ⚠️ 여기에 실제 GitHub 정보 입력하세요!
-    this.GIST_ID = 'YOUR_GIST_ID_HERE'; // 2단계에서 얻은 Gist ID
-    this.GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN_HERE'; // 1단계에서 얻은 토큰
+    this.GIST_ID = '5b2b6471bcc09c7c40c44413a0ed6baf'; // 2단계에서 얻은 Gist ID
+    this.GITHUB_TOKEN = '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'; // 1단계에서 얻은 토큰
     
     this.init();
   }
