@@ -216,7 +216,7 @@ const PurchaseOrderForm = () => {
       alert('거래번호(문서번호)를 입력해주세요.');
       return;
     }
-    exportToExcel(formData, 'order')
+    exportToExcel(formData, 'purchase')
       .then(()=>alert('엑셀 파일이 다운로드되었습니다.'))
       .catch(e=>{
         console.error(e);
