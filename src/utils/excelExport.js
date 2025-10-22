@@ -572,13 +572,46 @@ const showInventoryResult = (result, documentType) => {
       
       // 재고 부족 시 추가 안내
       message += '\n\n재고 관리 탭에서 부족한 부품을 확인하고 보충하세요.';
-    }
-    
-    // 결과 표시
-    if (result.warnings.length > 0) {
-      // 경고가 있으면 confirm으로 재고 탭 이동 제안
+      
+      // 결과 표시 - 부족한 부품들의 정보와 함께 탭 이동
       if (window.confirm(message + '\n\n재고 관리 탭으로 이동하시겠습니까?')) {
-        window.dispatchEvent(new CustomEvent('showInventoryTab'));
+        // ✅ 부족한 부품들의 정보를 함께 전달
+        const shortageInfo = result.warnings.map(w => ({
+          name: w.name,
+          partId: w.partId,
+          required: w.required,
+          available: w.available,
+          shortage: w.required - w.available
+        }));
+        
+        // ✅ 커스텀 이벤트로 재고 관리 탭 이동 + 부족한 부품 정보 전달
+        window.dispatchEvent(new CustomEvent('showInventoryTabWithShortage', {
+          detail: {
+            shortageItems: shortageInfo,
+            documentType: documentType
+          }
+        }));
+        
+        // ✅ 추가: 다른 방법으로도 시도 (라우터 이동)
+        try {
+          // React Router를 사용하는 경우
+          if (window.location.hash) {
+            window.location.hash = '#/inventory';
+          } else {
+            window.location.href = '/inventory';
+          }
+          
+          // ✅ 로컬스토리지에도 정보 저장 (백업용)
+          localStorage.setItem('inventoryShortageInfo', JSON.stringify({
+            shortageItems: shortageInfo,
+            timestamp: Date.now(),
+            documentType: documentType
+          }));
+          
+        } catch (error) {
+          console.error('재고 관리 탭 이동 실패:', error);
+          alert('재고 관리 탭으로 자동 이동할 수 없습니다. 수동으로 재고 관리 탭을 클릭해주세요.');
+        }
       }
     } else {
       // 정상 완료는 간단히 alert
