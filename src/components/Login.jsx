@@ -278,7 +278,7 @@ const Login = ({ onLogin }) => {
             🔒 모든 로그인 활동이 IP 주소와 함께 기록됩니다.
           </div>
           <div className="sync-info">
-            🌐 관리자 설정 변경 시 전 세계 모든 PC에 실시간 동기화됩니다.
+            🌐 관리자 설정 변경 시 모든 PC에 실시간 동기화됩니다.
           </div>
         </div>
       </div>
