@@ -14,6 +14,7 @@ import DeliveryNoteForm from './components/DeliveryNoteForm';
 import PrintPage from './components/PrintPage';
 import Login from './components/Login';
 import PasswordChange from './components/PasswordChange';
+import ShortageInventoryManager from './components/ShortageInventoryManager';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -86,21 +87,21 @@ function App() {
           onClose={handlePasswordChangeClose} 
         />
       )}
+      
+      <ShortageInventoryManager isAdmin={currentUser?.role === 'admin'} />
     </div>
   );
 }
 
-// ---------- ✅ 수정된 HomePage - 기존 currentPrice를 fallback으로 사용 ----------
 const HomePage = ({ currentUser }) => {
   const { currentPrice, currentBOM, addToCart, cart, cartBOM, cartBOMView, selectedType, selectedOptions } = useProducts();
   const [showCurrentBOM, setShowCurrentBOM] = useState(true);
   const [showTotalBOM, setShowTotalBOM] = useState(true);
   const [adminPricesVersion, setAdminPricesVersion] = useState(0);
 
-  // ✅ 관리자 단가가 반영된 최종 가격 계산 함수 - 기존 currentPrice를 fallback으로 사용
   const getFinalPrice = () => {
     if (!currentBOM || currentBOM.length === 0) {
-      return currentPrice; // ✅ BOM이 없으면 기존 currentPrice 사용
+      return currentPrice;
     }
     
     let hasAdminPrice = false;
@@ -116,20 +117,15 @@ const HomePage = ({ currentUser }) => {
       }
     });
     
-    // ✅ 관리자 단가가 하나도 없거나 계산 결과가 0이면 기존 currentPrice 사용
     return (hasAdminPrice && totalPrice > 0) ? totalPrice : currentPrice;
   };
 
-  // ✅ localStorage 변경 감지 (관리자 단가 수정 시 실시간 반영)
   useEffect(() => {
     const handleStorageChange = () => {
       setAdminPricesVersion(prev => prev + 1);
     };
 
-    // storage 이벤트 리스너 추가
     window.addEventListener('storage', handleStorageChange);
-    
-    // adminPriceUpdate 커스텀 이벤트 리스너 추가
     window.addEventListener('adminPriceUpdate', handleStorageChange);
     
     return () => {
@@ -138,14 +134,12 @@ const HomePage = ({ currentUser }) => {
     };
   }, []);
 
-  // ✅ 최종 가격 (관리자 단가 우선 적용, 없으면 기존 currentPrice 사용)
   const finalPrice = getFinalPrice();
   const canAddItem = finalPrice > 0;
   const canProceed = cart.length > 0;
 
   const totalBomForDisplay = cartBOMView || [];
 
-  // 현재 선택된 랙옵션 이름 생성
   const getCurrentRackOptionName = () => {
     if (!selectedType) return '';
     return [
@@ -162,9 +156,7 @@ const HomePage = ({ currentUser }) => {
     <div className="app-container">
       <h2>랙 제품 견적</h2>
       
-      {/* 새로운 레이아웃: 좌우 배치 */}
       <div className="main-layout">
-        {/* 좌측: 옵션 셀렉터와 가격 정보 */}
         <div className="left-section" style={{ flex: '1', marginRight: '20px' }}>
           <div className="option-section">
             <OptionSelector />
@@ -173,7 +165,6 @@ const HomePage = ({ currentUser }) => {
           <div className="price-section">
             <div className="price-display">
               <h3>현재 항목 예상 가격</h3>
-              {/* ✅ 관리자 단가가 반영된 최종 가격 표시, 없으면 기존 currentPrice 사용 */}
               <p className="price">{(finalPrice > 0) ? finalPrice.toLocaleString() : currentPrice.toLocaleString()}원</p>
               {finalPrice !== currentPrice && finalPrice > 0 && (
                 <p className="price-note" style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
@@ -184,7 +175,6 @@ const HomePage = ({ currentUser }) => {
           </div>
         </div>
 
-        {/* 우측: 새로운 원자재 단가 관리 영역 */}
         <div className="right-section" style={{ flex: '1' }}>
           <MaterialPriceManager currentUser={currentUser} cart={cart} />
         </div>
@@ -193,7 +183,6 @@ const HomePage = ({ currentUser }) => {
       <div className="action-buttons" style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
       </div>
 
-      {/* 기존 CartDisplay */}
       <CartDisplay />
 
       {canProceed && (
@@ -222,7 +211,6 @@ const HomePage = ({ currentUser }) => {
         </div>
       )}
 
-      {/* 기존 BOMDisplay */}
       {showTotalBOM && (
         <BOMDisplay 
           bom={totalBomForDisplay} 
@@ -235,7 +223,6 @@ const HomePage = ({ currentUser }) => {
   );
 };
 
-// ---------- 새로 추가된 InventoryPage ----------
 const InventoryPage = ({ currentUser }) => {
   return (
     <div className="app-container">
