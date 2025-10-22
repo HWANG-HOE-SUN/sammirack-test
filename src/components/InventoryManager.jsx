@@ -130,41 +130,15 @@ export const showInventoryResult = (result, documentType) => {
         message += `\n• 외 ${result.warnings.length - 3}개 부품...`;
       }
       
-      // 재고 부족 시 컴포넌트 표시 제안
-      message += '\n\n재고 부족 상세 정보를 확인하시겠습니까?';
-      
-      // 결과 표시 - 부족한 부품들 컴포넌트 표시
-      if (window.confirm(message)) {
-        // ✅ 부족한 부품들의 정보를 정리
-        const shortageInfo = result.warnings.map(w => ({
-          name: w.name,
-          partId: w.partId || w.name,
-          required: w.required,
-          available: w.available,
-          shortage: w.required - w.available,
-          rackType: w.rackType || '',
-          specification: w.specification || ''
-        }));
-        
-        console.log('📋 재고 부족 정보:', shortageInfo);
-        
-        // ✅ 재고 부족 컴포넌트 표시 이벤트 발생
-        window.dispatchEvent(new CustomEvent('showShortageInventoryPanel', {
-          detail: {
-            shortageItems: shortageInfo,
-            documentType: documentType,
-            timestamp: Date.now()
-          }
-        }));
-        
-        // ✅ 로컬스토리지에도 저장 (백업용)
-        localStorage.setItem('shortageInventoryData', JSON.stringify({
-          shortageItems: shortageInfo,
-          documentType: documentType,
-          timestamp: Date.now()
-        }));
-        
-        console.log('✅ 재고 부족 컴포넌트 표시 이벤트 발생');
+      // 재고 부족 시 추가 안내
+      message += '\n\n재고 관리 탭에서 부족한 부품을 확인하고 보충하세요.';
+    }
+    
+    // 결과 표시
+    if (result.warnings.length > 0) {
+      // 경고가 있으면 confirm으로 재고 탭 이동 제안
+      if (window.confirm(message + '\n\n재고 관리 탭으로 이동하시겠습니까?')) {
+        window.dispatchEvent(new CustomEvent('showInventoryTab'));
       }
     } else {
       // 정상 완료는 간단히 alert
@@ -188,6 +162,7 @@ const InventoryManager = ({ currentUser }) => {
   const [showOnlyInUse, setShowOnlyInUse] = useState(false);
   const [selectedRackType, setSelectedRackType] = useState('');
   const [editingPart, setEditingPart] = useState(null);
+  const [editQuantity, setEditQuantity] = useState('');
   const [sortConfig, setSortConfig] = useState({ field: '', direction: '' });
   const [showAdminPriceEditor, setShowAdminPriceEditor] = useState(false);
   const [editingPrice, setEditingPrice] = useState(null);
@@ -198,8 +173,8 @@ const InventoryManager = ({ currentUser }) => {
   
   // 일괄 작업 관련
   const [selectedItems, setSelectedItems] = useState(new Set());
-  const [bulkAction, setBulkAction] = useState(''); // 일괄 작업 종류
-  const [bulkValue, setBulkValue] = useState(''); // 일괄 작업 값
+  const [bulkAction, setBulkAction] = useState('');
+  const [bulkValue, setBulkValue] = useState('');
 
   // 관리자가 아닌 경우 접근 차단
   if (currentUser?.role !== 'admin') {
@@ -265,7 +240,7 @@ const InventoryManager = ({ currentUser }) => {
     };
   };
 
-  // ✅ 개선된 전체 원자재 로드 (통합 함수 사용)
+  // 전체 원자재 로드
   const loadAllMaterialsData = async () => {
     setIsLoading(true);
     try {
@@ -274,7 +249,6 @@ const InventoryManager = ({ currentUser }) => {
       setAllMaterials(materials);
       console.log(`✅ InventoryManager: ${materials.length}개 원자재 로드 완료`);
       
-      // 앙카볼트 등 주요 부품들이 포함되었는지 확인
       const anchorBolts = materials.filter(m => m.name.includes('앙카볼트'));
       const bracings = materials.filter(m => m.name.includes('브레싱'));
       console.log(`🔧 앙카볼트: ${anchorBolts.length}개, 브레싱 관련: ${bracings.length}개`);
@@ -390,7 +364,6 @@ const InventoryManager = ({ currentUser }) => {
       const success = await saveInventorySync(partId, quantity, userInfo);
       
       if (success) {
-        // 즉시 로컬 상태 업데이트
         setInventory(prev => ({
           ...prev,
           [partId]: quantity
@@ -403,6 +376,38 @@ const InventoryManager = ({ currentUser }) => {
       }
     } catch (error) {
       console.error('재고 저장 실패:', error);
+      setSyncStatus('❌ 오류');
+    }
+  };
+
+  // ✅ 빠른 재고 조정 함수 (복원)
+  const adjustInventory = async (partId, adjustment) => {
+    const currentQty = inventory[partId] || 0;
+    const newQty = Math.max(0, currentQty + adjustment);
+    
+    setSyncStatus('📤 저장 중...');
+    
+    try {
+      const userInfo = {
+        username: currentUser?.username || 'admin',
+        role: currentUser?.role || 'admin'
+      };
+
+      const success = await saveInventorySync(partId, newQty, userInfo);
+      
+      if (success) {
+        setInventory(prev => ({
+          ...prev,
+          [partId]: newQty
+        }));
+        
+        setSyncStatus('✅ 전세계 동기화됨');
+        setLastSyncTime(new Date());
+      } else {
+        setSyncStatus('❌ 저장 실패');
+      }
+    } catch (error) {
+      console.error('재고 조정 실패:', error);
       setSyncStatus('❌ 오류');
     }
   };
@@ -536,7 +541,6 @@ const InventoryManager = ({ currentUser }) => {
           const quantity = Math.max(0, Number(bulkValue) || 0);
           await handleInventoryChange({ partId }, quantity);
         }
-        // 단가 일괄 설정은 별도 구현 필요시 추가
       }
       
       alert(`${selectedCount}개 항목의 ${bulkAction === 'inventory' ? '재고' : '단가'}가 업데이트되었습니다.`);
@@ -605,7 +609,7 @@ const InventoryManager = ({ currentUser }) => {
     return filteredMaterials.filter(material => {
       const partId = material.partId || generatePartId(material);
       const quantity = inventory[partId] || 0;
-      return quantity <= 5; // 5개 이하를 부족한 재고로 간주
+      return quantity <= 5;
     });
   };
 
@@ -695,6 +699,49 @@ const InventoryManager = ({ currentUser }) => {
             ))}
           </select>
         </div>
+
+        {/* ✅ 랙타입 버튼 필터 추가 (복원) */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px', 
+          flexWrap: 'wrap', 
+          marginTop: '12px',
+          marginBottom: '12px'
+        }}>
+          <button
+            onClick={() => setSelectedRackType('')}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              border: selectedRackType === '' ? '2px solid #007bff' : '1px solid #ddd',
+              backgroundColor: selectedRackType === '' ? '#007bff' : 'white',
+              color: selectedRackType === '' ? 'white' : '#333',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: selectedRackType === '' ? 'bold' : 'normal'
+            }}
+          >
+            전체
+          </button>
+          {uniqueRackTypes.map(type => (
+            <button
+              key={type}
+              onClick={() => setSelectedRackType(type)}
+              style={{
+                padding: '8px 16px',
+                fontSize: '14px',
+                border: selectedRackType === type ? '2px solid #007bff' : '1px solid #ddd',
+                backgroundColor: selectedRackType === type ? '#007bff' : 'white',
+                color: selectedRackType === type ? 'white' : '#333',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: selectedRackType === type ? 'bold' : 'normal'
+              }}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
         
         <div className="filter-options">
           <label className="checkbox-label">
@@ -781,6 +828,8 @@ const InventoryManager = ({ currentUser }) => {
                 >
                   현재 재고 {sortConfig.field === 'quantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
+                {/* ✅ 빠른조정 컬럼 추가 (복원) */}
+                <th>빠른조정</th>
                 <th 
                   onClick={() => handleSort('price')}
                   className="sortable"
@@ -798,6 +847,7 @@ const InventoryManager = ({ currentUser }) => {
                 const { price, isModified } = getDisplayPrice(material);
                 const totalValue = quantity * price;
                 const isLowStock = quantity <= 5;
+                const isEditing = editingPart === partId;
 
                 return (
                   <tr key={partId || index} className={isLowStock ? 'low-stock' : ''}>
@@ -824,14 +874,138 @@ const InventoryManager = ({ currentUser }) => {
                       <span className="rack-type">{material.rackType}</span>
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => handleInventoryChange(material, e.target.value)}
-                        min="0"
-                        className={`quantity-input ${isLowStock ? 'low-stock-input' : ''}`}
-                      />
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={editQuantity}
+                          onChange={(e) => setEditQuantity(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleInventoryChange(material, editQuantity);
+                              setEditingPart(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingPart(null);
+                            }
+                          }}
+                          onBlur={() => {
+                            handleInventoryChange(material, editQuantity);
+                            setEditingPart(null);
+                          }}
+                          className={`quantity-input ${isLowStock ? 'low-stock-input' : ''}`}
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          onClick={() => {
+                            setEditingPart(partId);
+                            setEditQuantity(quantity.toString());
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            backgroundColor: quantity === 0 ? '#dc3545' : 
+                                           quantity < 100 ? '#ffc107' : '#28a745',
+                            color: 'white',
+                            display: 'inline-block',
+                            minWidth: '50px'
+                          }}
+                        >
+                          {quantity.toLocaleString()}개
+                        </span>
+                      )}
                       {isLowStock && <span className="low-stock-badge">부족</span>}
+                    </td>
+                    {/* ✅ 빠른조정 버튼들 추가 (복원) */}
+                    <td>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => adjustInventory(partId, -100)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            border: '1px solid #dc3545',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          -100
+                        </button>
+                        <button
+                          onClick={() => adjustInventory(partId, -50)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            border: '1px solid #dc3545',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          -50
+                        </button>
+                        <button
+                          onClick={() => adjustInventory(partId, -10)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            border: '1px solid #ffc107',
+                            backgroundColor: '#ffc107',
+                            color: 'white',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          -10
+                        </button>
+                        <button
+                          onClick={() => adjustInventory(partId, 10)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            border: '1px solid #28a745',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +10
+                        </button>
+                        <button
+                          onClick={() => adjustInventory(partId, 50)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            border: '1px solid #28a745',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +50
+                        </button>
+                        <button
+                          onClick={() => adjustInventory(partId, 100)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            border: '1px solid #17a2b8',
+                            backgroundColor: '#17a2b8',
+                            color: 'white',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +100
+                        </button>
+                      </div>
                     </td>
                     <td>
                       <div className="price-display">
@@ -848,7 +1022,7 @@ const InventoryManager = ({ currentUser }) => {
                     </td>
                     <td>
                       <button
-                        onClick={() => setEditingPart(material)}
+                        onClick={() => setEditingPrice(material)}
                         className="edit-price-btn"
                         title="단가 수정"
                       >
@@ -864,10 +1038,10 @@ const InventoryManager = ({ currentUser }) => {
       </div>
 
       {/* 관리자 단가 편집기 */}
-      {editingPart && (
+      {editingPrice && (
         <AdminPriceEditor
-          part={editingPart}
-          onClose={() => setEditingPart(null)}
+          part={editingPrice}
+          onClose={() => setEditingPrice(null)}
           currentUser={currentUser}
         />
       )}
@@ -875,7 +1049,7 @@ const InventoryManager = ({ currentUser }) => {
       <style jsx>{`
         .inventory-manager {
           padding: 20px;
-          max-width: 1400px;
+          max-width: 1800px;
           margin: 0 auto;
         }
 
@@ -1021,35 +1195,33 @@ const InventoryManager = ({ currentUser }) => {
         }
 
         .search-stats {
-          color: #666;
           font-size: 14px;
+          color: #666;
         }
 
         .bulk-actions {
           background: #fff3cd;
           padding: 15px;
           border-radius: 6px;
-          margin-bottom: 20px;
-          border: 1px solid #ffeaa7;
+          margin-bottom: 15px;
         }
 
         .bulk-controls {
           display: flex;
-          gap: 15px;
+          gap: 10px;
           align-items: center;
         }
 
         .bulk-action-select, .bulk-value-input {
-          padding: 8px 12px;
+          padding: 8px;
           border: 1px solid #ddd;
           border-radius: 4px;
-          font-size: 14px;
         }
 
         .bulk-apply-btn {
           padding: 8px 16px;
-          background: #ffc107;
-          color: #212529;
+          background: #007bff;
+          color: white;
           border: none;
           border-radius: 4px;
           cursor: pointer;
@@ -1058,18 +1230,18 @@ const InventoryManager = ({ currentUser }) => {
 
         .bulk-apply-btn:disabled {
           background: #6c757d;
-          color: white;
           cursor: not-allowed;
         }
 
         .sync-info-banner {
-          background: #e3f2fd;
+          background: #d1ecf1;
+          color: #0c5460;
           padding: 12px;
           border-radius: 6px;
           text-align: center;
-          margin-bottom: 20px;
-          color: #1565c0;
-          font-weight: bold;
+          margin-bottom: 15px;
+          font-size: 14px;
+          font-weight: 500;
         }
 
         .inventory-table-container {
@@ -1082,14 +1254,18 @@ const InventoryManager = ({ currentUser }) => {
         .inventory-table {
           width: 100%;
           border-collapse: collapse;
+          min-width: 1200px;
         }
 
         .inventory-table th {
           background: #f8f9fa;
-          padding: 12px;
+          padding: 12px 8px;
           text-align: left;
-          font-weight: bold;
+          font-weight: 600;
+          color: #333;
           border-bottom: 2px solid #dee2e6;
+          position: sticky;
+          top: 0;
         }
 
         .inventory-table th.sortable {
@@ -1102,7 +1278,7 @@ const InventoryManager = ({ currentUser }) => {
         }
 
         .inventory-table td {
-          padding: 12px;
+          padding: 10px 8px;
           border-bottom: 1px solid #dee2e6;
         }
 
