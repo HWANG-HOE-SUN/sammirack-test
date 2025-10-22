@@ -21,7 +21,7 @@ function kgLabelFix(str) {
   return String(str).replace(/200kg/g, '270kg').replace(/350kg/g, '450kg');
 }
 
-// 재고 감소 함수 (export 필요)
+// ✅ 재고 감소 함수 수정 (export 필요)
 export const deductInventoryOnPrint = (cartItems, documentType = 'document', documentNumber = '') => {
   if (!cartItems || !Array.isArray(cartItems)) {
     console.warn('재고 감소: 유효하지 않은 카트 데이터');
@@ -29,22 +29,33 @@ export const deductInventoryOnPrint = (cartItems, documentType = 'document', doc
   }
   
   console.log(`📋 프린트 재고 감소 시작: ${documentType} ${documentNumber}`);
+  console.log('📦 카트 아이템:', cartItems);
   
   try {
-    // 현재 재고 데이터 로드
+    // ✅ 수정: 올바른 로컬스토리지 키 사용
     const stored = localStorage.getItem('inventory_data') || '{}';
     const inventory = JSON.parse(stored);
+    
+    console.log('📦 현재 재고 상태:', inventory);
     
     const deductedParts = [];
     const warnings = [];
     
     // 모든 카트 아이템의 BOM 부품들을 추출하여 재고 감소
     cartItems.forEach((item, itemIndex) => {
+      console.log(`\n🔍 카트 아이템 ${itemIndex + 1}:`, item);
+      
       if (item.bom && Array.isArray(item.bom)) {
-        item.bom.forEach((bomItem) => {
+        console.log(`  📦 BOM 항목 수: ${item.bom.length}`);
+        
+        item.bom.forEach((bomItem, bomIndex) => {
           const partId = generatePartId(bomItem);
           const requiredQty = Number(bomItem.quantity) || 0;
           const currentStock = inventory[partId] || 0;
+          
+          console.log(`  - BOM ${bomIndex + 1}: ${bomItem.name}`);
+          console.log(`    partId: ${partId}`);
+          console.log(`    필요: ${requiredQty}, 현재재고: ${currentStock}`);
           
           if (requiredQty > 0) {
             if (currentStock >= requiredQty) {
@@ -54,62 +65,78 @@ export const deductInventoryOnPrint = (cartItems, documentType = 'document', doc
                 partId,
                 name: bomItem.name,
                 specification: bomItem.specification || '',
+                rackType: bomItem.rackType || '',
                 deducted: requiredQty,
                 remainingStock: inventory[partId]
               });
+              console.log(`    ✅ 재고 감소 완료: ${currentStock} → ${inventory[partId]}`);
             } else {
               // 재고 부족 경고
               warnings.push({
                 partId,
                 name: bomItem.name,
                 specification: bomItem.specification || '',
+                rackType: bomItem.rackType || '',
                 required: requiredQty,
                 available: currentStock,
                 shortage: requiredQty - currentStock
               });
-              
-              // 가능한 만큼만 감소
-              if (currentStock > 0) {
-                inventory[partId] = 0;
-                deductedParts.push({
-                  partId,
-                  name: bomItem.name,
-                  specification: bomItem.specification || '',
-                  deducted: currentStock,
-                  remainingStock: 0
-                });
-              }
+              console.log(`    ⚠️ 재고 부족: 필요 ${requiredQty}, 가용 ${currentStock}`);
             }
           }
         });
+      } else {
+        console.log(`  ⚠️ BOM 데이터 없음`);
       }
     });
     
-    // 변경된 재고 저장
+    // ✅ 수정: 올바른 로컬스토리지 키로 저장
     localStorage.setItem('inventory_data', JSON.stringify(inventory));
     
-    console.log(`✅ 재고 감소 완료: ${deductedParts.length}개 부품, ${warnings.length}개 경고`);
+    // 재고 업데이트 이벤트 발생
+    window.dispatchEvent(new CustomEvent('inventoryUpdated', {
+      detail: {
+        documentType,
+        documentNumber,
+        deductedParts,
+        warnings,
+        timestamp: Date.now()
+      }
+    }));
+    
+    console.log('\n📋 재고 감소 결과:');
+    console.log(`  ✅ 성공적으로 감소된 부품: ${deductedParts.length}개`);
+    console.log(`  ⚠️  재고 부족 경고: ${warnings.length}개`);
     
     return {
       success: true,
       deductedParts,
       warnings,
-      message: `${deductedParts.length}개 부품 재고가 감소되었습니다.`
+      message: warnings.length > 0 
+        ? `재고 감소 완료 (${warnings.length}개 부품 재고 부족)` 
+        : '재고 감소 완료'
     };
     
   } catch (error) {
-    console.error('❌ 재고 감소 처리 중 오류:', error);
+    console.error('❌ 재고 감소 실패:', error);
     return {
       success: false,
-      message: '재고 감소 처리 중 오류가 발생했습니다.',
-      error: error.message
+      message: `재고 감소 실패: ${error.message}`,
+      deductedParts: [],
+      warnings: []
     };
   }
 };
 
 // 재고 감소 결과 사용자에게 표시
+// ✅ 추가: showInventoryResult 함수 export
 export const showInventoryResult = (result, documentType) => {
-  if (!result) return;
+  if (!result) {
+    console.warn('showInventoryResult: 결과 데이터 없음');
+    return;
+  }
+  
+  console.log('📊 재고 결과 표시:', result);
   
   let message = `📄 ${documentType} 출력 완료\n`;
   
@@ -121,7 +148,7 @@ export const showInventoryResult = (result, documentType) => {
       
       // 재고 부족 부품 상세 (최대 3개)
       const warningDetails = result.warnings.slice(0, 3).map(w => 
-        `• ${w.name}: 필요 ${w.required}개, 가용 ${w.available}개`
+        `• ${w.name} (${w.specification || ''}): 필요 ${w.required}개, 가용 ${w.available}개`
       ).join('\n');
       
       message += '\n' + warningDetails;
@@ -130,15 +157,44 @@ export const showInventoryResult = (result, documentType) => {
         message += `\n• 외 ${result.warnings.length - 3}개 부품...`;
       }
       
-      // 재고 부족 시 추가 안내
-      message += '\n\n재고 관리 탭에서 부족한 부품을 확인하고 보충하세요.';
-    }
-    
-    // 결과 표시
-    if (result.warnings.length > 0) {
-      // 경고가 있으면 confirm으로 재고 탭 이동 제안
-      if (window.confirm(message + '\n\n재고 관리 탭으로 이동하시겠습니까?')) {
-        window.dispatchEvent(new CustomEvent('showInventoryTab'));
+      // ✅ 재고 부족 시 컴포넌트 표시 이벤트 발생
+      message += '\n\n재고 부족 상세 정보를 확인하시겠습니까?';
+      
+      // 결과 표시 - 부족한 부품들 컴포넌트 표시
+      if (window.confirm(message)) {
+        // ✅ 부족한 부품들의 정보를 정리
+        const shortageInfo = result.warnings.map(w => ({
+          name: w.name,
+          partId: w.partId || w.name,
+          required: w.required,
+          available: w.available,
+          shortage: w.shortage || (w.required - w.available),
+          rackType: w.rackType || '',
+          specification: w.specification || ''
+        }));
+        
+        console.log('📋 재고 부족 정보:', shortageInfo);
+        
+        // ✅ 재고 부족 컴포넌트 표시 이벤트 발생
+        window.dispatchEvent(new CustomEvent('showShortageInventoryPanel', {
+          detail: {
+            shortageItems: shortageInfo,
+            documentType: documentType,
+            timestamp: Date.now()
+          }
+        }));
+        
+        // ✅ 로컬스토리지에도 저장 (백업용)
+        localStorage.setItem('shortageInventoryData', JSON.stringify({
+          shortageItems: shortageInfo,
+          documentType: documentType,
+          timestamp: Date.now()
+        }));
+        
+        console.log('✅ 재고 부족 컴포넌트 표시 이벤트 발생');
+        
+        // ✅ 중요: 여기서 return하여 인쇄 팝업이 뜨지 않도록 함
+        return;
       }
     } else {
       // 정상 완료는 간단히 alert
@@ -192,13 +248,29 @@ const InventoryManager = ({ currentUser }) => {
     );
   }
 
-  useEffect(() => {
-    loadAllMaterialsData();
-    loadInventoryData();
-    loadAdminPricesData();
-    loadRackOptions();
-    setupRealtimeListeners();
-  }, []);
+useEffect(() => {
+  // ✅ async 함수를 만들어 순차적으로 데이터 로드
+  const initializeData = async () => {
+    try {
+      setSyncStatus('🔄 초기화 중...');
+      
+      // 순차적으로 데이터 로드
+      await loadAllMaterialsData();
+      await loadInventoryData();  // ✅ 서버 동기화 후 로드
+      loadAdminPricesData();  // 동기 함수는 그대로
+      await loadRackOptions();
+      setupRealtimeListeners();
+      
+      setSyncStatus('✅ 초기화 완료');
+      setLastSyncTime(new Date());
+    } catch (error) {
+      console.error('❌ 초기화 실패:', error);
+      setSyncStatus('❌ 초기화 오류');
+    }
+  };
+  
+  initializeData();
+}, []);
 
   // 실시간 동기화 리스너 설정
   const setupRealtimeListeners = () => {
@@ -261,15 +333,29 @@ const InventoryManager = ({ currentUser }) => {
     }
   };
 
-  // 재고 데이터 로드
-  const loadInventoryData = () => {
+  // 재고 데이터 로드 (서버에서 먼저 동기화)
+  const loadInventoryData = async () => {
     try {
+      console.log('🔄 재고 데이터 로드 시작 - 서버 동기화 중...');
+      
+      // ✅ 1. 서버(GitHub Gist)에서 최신 데이터 먼저 가져오기
+      await forceServerSync();
+      
+      // ✅ 2. 동기화된 로컬 데이터 읽기
       const data = loadInventory();
       setInventory(data);
-      console.log(`📦 재고 데이터 로드: ${Object.keys(data).length}개 항목`);
+      console.log(`📦 재고 데이터 로드 완료: ${Object.keys(data).length}개 항목`);
     } catch (error) {
       console.error('❌ 재고 데이터 로드 실패:', error);
-      setInventory({});
+      // 서버 동기화 실패시에도 로컬 데이터는 읽기
+      try {
+        const data = loadInventory();
+        setInventory(data);
+        console.log(`⚠️ 로컬 재고 데이터 로드: ${Object.keys(data).length}개 항목`);
+      } catch (localError) {
+        console.error('❌ 로컬 재고 데이터도 로드 실패:', localError);
+        setInventory({});
+      }
     }
   };
 
@@ -329,20 +415,26 @@ const InventoryManager = ({ currentUser }) => {
   // 전체 데이터 로드
   const loadAllData = async () => {
     setIsLoading(true);
-    setSyncStatus('🔄 로딩 중...');
+    setSyncStatus('🔄 서버 동기화 중...');
     
     try {
+      // ✅ 서버 동기화 먼저 실행
+      console.log('🔄 전체 데이터 로드 시작 - 서버 동기화 중...');
+      await forceServerSync();
+      
+      // ✅ 동기화 후 각 데이터 로드
       await Promise.all([
         loadAllMaterialsData(),
         loadInventoryData(),
         loadAdminPricesData()
       ]);
       
-      setSyncStatus('✅ 동기화됨');
+      setSyncStatus('✅ 전세계 동기화 완료');
       setLastSyncTime(new Date());
+      console.log('✅ 전체 데이터 로드 완료');
     } catch (error) {
       console.error('❌ 데이터 로드 실패:', error);
-      setSyncStatus('❌ 오류');
+      setSyncStatus('❌ 동기화 오류');
     } finally {
       setIsLoading(false);
     }
