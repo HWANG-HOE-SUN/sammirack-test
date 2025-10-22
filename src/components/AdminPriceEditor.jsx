@@ -1,4 +1,4 @@
-// src/components/AdminPriceEditor.jsx
+// src/components/AdminPriceEditor.jsx (수정된 코드)
 import React, { useState, useEffect } from 'react';
 import { 
   saveAdminPriceSync, 
@@ -6,15 +6,38 @@ import {
   generatePartId 
 } from '../utils/realtimeAdminSync';
 
-const AdminPriceEditor = ({ part, onClose, currentUser }) => {
+const AdminPriceEditor = ({ item, part, onClose, currentUser }) => {
+  // ✅ item과 part 둘 다 받을 수 있도록 처리 (하위 호환성)
+  const targetPart = part || item;
+  
   const [newPrice, setNewPrice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentAdminPrice, setCurrentAdminPrice] = useState(0);
   const [message, setMessage] = useState('');
 
+  // ✅ 방어 코드 추가: targetPart가 없으면 에러 표시
+  if (!targetPart) {
+    return (
+      <div className="admin-price-editor-overlay">
+        <div className="admin-price-editor">
+          <div className="editor-header">
+            <h3>오류</h3>
+            <button onClick={onClose} className="close-btn">×</button>
+          </div>
+          <div style={{ padding: '20px', textAlign: 'center', color: '#dc3545' }}>
+            부품 정보를 불러올 수 없습니다.
+          </div>
+          <div className="editor-actions">
+            <button onClick={onClose} className="cancel-btn">닫기</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     loadCurrentPrice();
-  }, [part]);
+  }, [targetPart]);
 
   // 실시간 업데이트 감지
   useEffect(() => {
@@ -32,7 +55,7 @@ const AdminPriceEditor = ({ part, onClose, currentUser }) => {
   const loadCurrentPrice = () => {
     try {
       const adminPrices = loadAdminPrices();
-      const partId = generatePartId(part);
+      const partId = generatePartId(targetPart);
       const currentPrice = adminPrices[partId]?.price || 0;
       setCurrentAdminPrice(currentPrice);
       setNewPrice(currentPrice > 0 ? currentPrice.toString() : '');
@@ -53,12 +76,12 @@ const AdminPriceEditor = ({ part, onClose, currentUser }) => {
     setMessage('저장 중...');
 
     try {
-      const partId = generatePartId(part);
+      const partId = generatePartId(targetPart);
       const partInfo = {
-        rackType: part.rackType,
-        name: part.name,
-        specification: part.specification || '',
-        originalPrice: part.unitPrice || 0
+        rackType: targetPart.rackType || '',
+        name: targetPart.name || '',
+        specification: targetPart.specification || '',
+        originalPrice: targetPart.unitPrice || 0
       };
 
       const userInfo = {
@@ -97,11 +120,11 @@ const AdminPriceEditor = ({ part, onClose, currentUser }) => {
     setMessage('삭제 중...');
 
     try {
-      const partId = generatePartId(part);
+      const partId = generatePartId(targetPart);
       const partInfo = {
-        rackType: part.rackType,
-        name: part.name,
-        specification: part.specification || ''
+        rackType: targetPart.rackType || '',
+        name: targetPart.name || '',
+        specification: targetPart.specification || ''
       };
 
       const userInfo = {
@@ -142,21 +165,21 @@ const AdminPriceEditor = ({ part, onClose, currentUser }) => {
         <div className="part-info">
           <div className="info-row">
             <span className="label">랙타입:</span>
-            <span className="value">{part.rackType}</span>
+            <span className="value">{targetPart.rackType || '정보 없음'}</span>
           </div>
           <div className="info-row">
             <span className="label">부품명:</span>
-            <span className="value">{part.name}</span>
+            <span className="value">{targetPart.name || '정보 없음'}</span>
           </div>
-          {part.specification && (
+          {targetPart.specification && (
             <div className="info-row">
               <span className="label">규격:</span>
-              <span className="value">{part.specification}</span>
+              <span className="value">{targetPart.specification}</span>
             </div>
           )}
           <div className="info-row">
             <span className="label">기본 단가:</span>
-            <span className="value">{(part.unitPrice || 0).toLocaleString()}원</span>
+            <span className="value">{(targetPart.unitPrice || 0).toLocaleString()}원</span>
           </div>
           <div className="info-row">
             <span className="label">현재 관리자 단가:</span>
