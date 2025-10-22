@@ -1,7 +1,7 @@
 // src/utils/excelExport.js
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { deductInventoryOnPrint } from '../components/InventoryManager.jsx'; // showinven 임포트하려다가 밑에서 const로 걍 하고있음
+import { deductInventoryOnPrint } from '../components/InventoryManager.jsx';
 
 /** ---------------------------
  *  공통 유틸
@@ -99,12 +99,11 @@ function setRowHeights(ws, map) {
   });
 }
 
-
 /** 공통 상단 정보(문서제목/회사/고객) */
 function buildTop(ws, type, { date, companyName, contact } = {}) {
   // 문서 제목 A5:H5
   ws.mergeCells('A5:H5');
-  const title = type === 'purchase' ? '청구서' : type === 'transaction' ? '거래명세서' : '견적서';
+  const title = type === 'purchase' ? '청구서' : type === 'delivery' ? '거래명세서' : '견적서';
   const titleCell = ws.getCell('A5');
   titleCell.value = title;
   titleCell.font = { bold: true, size: 20 };
@@ -123,7 +122,7 @@ function buildTop(ws, type, { date, companyName, contact } = {}) {
 
   // 아래 문구 A9:C10 병합
   ws.mergeCells('A9:C10');
-  const bottomText = type === 'purchase' ? '아래와 같이 청구합니다' : type === 'transaction' ? '아래와 같이 거래합니다' : '아래와 같이 견적합니다';
+  const bottomText = type === 'purchase' ? '아래와 같이 청구합니다' : type === 'delivery' ? '아래와 같이 거래합니다' : '아래와 같이 견적합니다';
   ws.getCell('A9').value = bottomText;
   ws.getCell('A9').alignment = alignCenter;
   setRowHeights(ws, { 9: 40 });
@@ -199,17 +198,35 @@ function buildEstimate(ws, items = [], totals, notes) {
   // 숫자 서식 (E,F 열)
   setNumFmt(ws, 13, 5, 12 + rowCount, 6);
 
-  // 소계/부가세/합계 (A26:F28 / G26:H28)
+  // ✅ 수식으로 변경: 소계/부가세/합계 (A26:F28 / G26:H28)
   const totalStart = 26;
   const labels = ['소계', '부가가치세', '합계'];
-  const values = [totals?.subtotal || 0, totals?.tax || 0, totals?.total || 0];
+  
   for (let i = 0; i < 3; i++) {
     const r = totalStart + i;
     ws.mergeCells(`A${r}:F${r}`);
     ws.getCell(`A${r}`).value = labels[i];
     ws.getCell(`A${r}`).alignment = alignCenter;
     ws.mergeCells(`G${r}:H${r}`);
-    ws.getCell(`G${r}`).value = values[i];
+    
+    // ✅ 고정값 대신 엑셀 수식 적용
+    if (i === 0) { // 소계
+      ws.getCell(`G${r}`).value = { 
+        formula: `SUM(F13:F${12 + rowCount})`, 
+        result: totals?.subtotal || 0 
+      };
+    } else if (i === 1) { // 부가가치세
+      ws.getCell(`G${r}`).value = { 
+        formula: `G${totalStart}*0.1`, 
+        result: totals?.tax || 0 
+      };
+    } else { // 합계
+      ws.getCell(`G${r}`).value = { 
+        formula: `G${totalStart}+G${totalStart + 1}`, 
+        result: totals?.total || 0 
+      };
+    }
+    
     styleRange(ws, r, 1, r, 8, { font: fontDefault, alignment: alignCenter, border: borderThin });
   }
   // 합계 숫자 서식
@@ -244,14 +261,14 @@ function buildEstimate(ws, items = [], totals, notes) {
 function buildPurchaseOrTransaction(ws, type, items = [], materials = [], totals, notes) {
   // 섹션 타이틀 A11:H11
   ws.mergeCells('A11:H11');
-  const sectionTitle = type === 'purchase' ? '청구 명세' : '거래 명세';
+  const sectionTitle = type === 'purchase' ? '청구명세' : '거래명세';
   ws.getCell('A11').value = sectionTitle;
   ws.getCell('A11').fill = fillHeader;
   ws.getCell('A11').alignment = alignCenter;
   ws.getCell('A11').font = { bold: true, size: 16 };
   styleRange(ws, 11, 1, 11, 8, { font: fontDefault, border: borderThin });
 
-  // 헤더(명세) A12:H12 (G:H 비고 합치기)
+  // 헤더 A12:H12 (G~H 비고 병합)
   ws.getCell('A12').value = 'NO';
   ws.getCell('B12').value = '품명';
   ws.getCell('C12').value = '단위';
@@ -261,7 +278,7 @@ function buildPurchaseOrTransaction(ws, type, items = [], materials = [], totals
   ws.mergeCells('G12:H12'); ws.getCell('G12').value = '비고';
   styleRange(ws, 12, 1, 12, 8, { font: { ...fontDefault, bold: true }, alignment: alignCenter, border: borderThin, fill: fillHeader });
 
-  // 아이템 최소 8행
+  // 상품 데이터 최소 8행 확보 (NO 1~8)
   const itemRows = Math.max(items?.length || 0, 8);
   for (let i = 0; i < itemRows; i++) {
     const r = 13 + i;
@@ -279,17 +296,39 @@ function buildPurchaseOrTransaction(ws, type, items = [], materials = [], totals
   // 숫자 서식
   setNumFmt(ws, 13, 5, 12 + itemRows, 6);
 
-  // 합계 A21:F23 / G21:H23
+  // ✅ 수식으로 변경: 합계 A21:F23 / G21:H23
   const totalStart = 21;
   const labels = ['소계', '부가가치세', '합계'];
-  const values = [totals?.subtotal || 0, totals?.tax || 0, totals?.total || 0];
+  
+  // 원자재 데이터 범위 계산 (26행부터 최소 30행)
+  const matRows = Math.max(materials?.length || 0, 30);
+  const materialEndRow = 25 + matRows; // 26행부터 시작하므로
+  
   for (let i = 0; i < 3; i++) {
     const r = totalStart + i;
     ws.mergeCells(`A${r}:F${r}`);
     ws.getCell(`A${r}`).value = labels[i];
     ws.getCell(`A${r}`).alignment = alignCenter;
     ws.mergeCells(`G${r}:H${r}`);
-    ws.getCell(`G${r}`).value = values[i];
+    
+    // ✅ 고정값 대신 엑셀 수식 적용 (원자재 E열 기준)
+    if (i === 0) { // 소계
+      ws.getCell(`G${r}`).value = { 
+        formula: `SUM(E26:E${materialEndRow})`, 
+        result: totals?.subtotal || 0 
+      };
+    } else if (i === 1) { // 부가가치세
+      ws.getCell(`G${r}`).value = { 
+        formula: `G${totalStart}*0.1`, 
+        result: totals?.tax || 0 
+      };
+    } else { // 합계
+      ws.getCell(`G${r}`).value = { 
+        formula: `G${totalStart}+G${totalStart + 1}`, 
+        result: totals?.total || 0 
+      };
+    }
+    
     styleRange(ws, r, 1, r, 8, { font: fontDefault, alignment: alignCenter, border: borderThin });
   }
   setNumFmt(ws, totalStart, 7, totalStart + 2, 8);
@@ -312,7 +351,6 @@ function buildPurchaseOrTransaction(ws, type, items = [], materials = [], totals
   styleRange(ws, 25, 1, 25, 8, { font: { ...fontDefault, bold: true }, alignment: alignCenter, border: borderThin, fill: fillHeader });
 
   // 원자재 데이터 최소 30행 (A26~A55)
-  const matRows = Math.max(materials?.length || 0, 30);
   for (let i = 0; i < matRows; i++) {
     const r = 26 + i;
     const m = materials[i] || {};
@@ -374,7 +412,7 @@ async function placeStamp(workbook, ws) {
 export async function exportToExcel(rawData, type = 'estimate') {
   // rawData: { date, companyName, items, materials, subtotal, tax, totalAmount, notes, ... }
   const workbook = new ExcelJS.Workbook();
-  const sheetName = type === 'purchase' ? '청구서' : (type === 'transaction' ? '거래명세서' : '견적서');
+  const sheetName = type === 'purchase' ? '청구서' : (type === 'delivery' ? '거래명세서' : '견적서');
   const ws = workbook.addWorksheet(sheetName);
 
   // 컬럼 너비
@@ -397,7 +435,7 @@ export async function exportToExcel(rawData, type = 'estimate') {
   };
   const notes = rawData?.notes || '';
 
-  if (type === 'purchase' || type === 'transaction') {
+  if (type === 'purchase' || type === 'delivery') {
     // 청구서와 거래명세서는 동일한 레이아웃 (원자재 명세서 포함)
     buildPurchaseOrTransaction(ws, type, items, materials, totals, notes);
   } else {
@@ -415,7 +453,7 @@ export async function exportToExcel(rawData, type = 'estimate') {
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const fileName = generateFileName(
-    type === 'transaction' ? 'transaction' : type === 'purchase' ? 'purchase' : 'estimate'
+    type === 'delivery' ? 'delivery' : type === 'purchase' ? 'purchase' : 'estimate'
   );
   saveAs(blob, fileName);
 }
@@ -426,7 +464,7 @@ export async function exportToExcel(rawData, type = 'estimate') {
 export const exportEstimateWithInventory = async (formData, cartData, fileName) => {
   try {
     // 1. 기존 Excel 출력
-    await exportToExcel(formData, fileName || generateFileName('estimate'));
+    await exportToExcel(formData, 'estimate');
     console.log('✅ 견적서 Excel 출력 완료');
     
     // 2. 재고 감소 (견적서는 선택적)
@@ -452,17 +490,17 @@ export const exportEstimateWithInventory = async (formData, cartData, fileName) 
 /**
  * ✅ 청구서 출력 시 재고 감소 연동
  */
-export const exportInvoiceWithInventory = async (formData, cartData, fileName) => {
+export const exportPurchaseWithInventory = async (formData, cartData, fileName) => {
   try {
     // 1. 기존 Excel 출력
-    await exportToExcel(formData, fileName || generateFileName('invoice'));
+    await exportToExcel(formData, 'purchase');
     console.log('✅ 청구서 Excel 출력 완료');
     
     // 2. 재고 자동 감소 (청구서는 자동)
     if (cartData?.cart) {
       const result = deductInventoryOnPrint(
         cartData.cart, 
-        'invoice', 
+        'purchase', 
         formData.documentNumber || fileName || '청구서'
       );
       
@@ -479,30 +517,30 @@ export const exportInvoiceWithInventory = async (formData, cartData, fileName) =
 };
 
 /**
- * ✅ 발주서 출력 시 재고 감소 연동
+ * ✅ 거래명세서 출력 시 재고 감소 연동
  */
-export const exportPurchaseOrderWithInventory = async (formData, cartData, fileName) => {
+export const exportDeliveryWithInventory = async (formData, cartData, fileName) => {
   try {
     // 1. 기존 Excel 출력
-    await exportToExcel(formData, fileName || generateFileName('purchase_order'));
-    console.log('✅ 발주서 Excel 출력 완료');
+    await exportToExcel(formData, 'delivery');
+    console.log('✅ 거래명세서 Excel 출력 완료');
     
-    // 2. 재고 자동 감소 (발주서는 자동)
+    // 2. 재고 자동 감소 (거래명세서는 자동)
     if (cartData?.cart) {
       const result = deductInventoryOnPrint(
         cartData.cart, 
-        'purchase_order', 
-        formData.documentNumber || fileName || '발주서'
+        'delivery', 
+        formData.documentNumber || fileName || '거래명세서'
       );
       
-      showInventoryResult(result, '발주서');
+      showInventoryResult(result, '거래명세서');
       return result;
     }
     
-    return { success: true, message: '발주서 출력 완료 (재고 감소 대상 없음)' };
+    return { success: true, message: '거래명세서 출력 완료 (재고 감소 대상 없음)' };
     
   } catch (error) {
-    console.error('발주서 출력 실패:', error);
+    console.error('거래명세서 출력 실패:', error);
     throw error;
   }
 };
@@ -562,20 +600,19 @@ export const printDocumentWithInventory = async (documentType, formData, cartDat
     case 'estimate':
       return await exportEstimateWithInventory(formData, cartData, fileName);
     
-    case 'invoice':
-      return await exportInvoiceWithInventory(formData, cartData, fileName);
+    case 'purchase':
+      return await exportPurchaseWithInventory(formData, cartData, fileName);
     
-    case 'purchase_order':
-      return await exportPurchaseOrderWithInventory(formData, cartData, fileName);
+    case 'delivery':
+      return await exportDeliveryWithInventory(formData, cartData, fileName);
     
     default:
       // 기본은 기존 방식 (재고 감소 없음)
-      await exportToExcel(formData, fileName);
+      await exportToExcel(formData, documentType);
       console.log("재고 감소 없이 프린트 되었음")
       return { success: true, message: '문서 출력 완료' };
   }
 };
-
 
 // 호환용 default export 묶음 (원하면 import default로도 쓸 수 있게)
 export default { exportToExcel, generateFileName };
