@@ -93,7 +93,7 @@ const AdminPriceEditor = ({ item, part, onClose, currentUser }) => {
       const success = await saveAdminPriceSync(partId, price, partInfo, userInfo);
       
       if (success) {
-        setMessage('✅ 전 세계 모든 PC에 즉시 반영되었습니다!');
+        setMessage('✅ 모든 PC에 즉시 반영되었습니다!');
         setCurrentAdminPrice(price);
         
         // 3초 후 자동 닫기
@@ -215,7 +215,7 @@ const AdminPriceEditor = ({ item, part, onClose, currentUser }) => {
             disabled={isLoading || newPrice === ''}
             className="save-btn"
           >
-            {isLoading ? '저장 중...' : '💾 전 세계 즉시 적용'}
+            {isLoading ? '저장 중...' : '💾 즉시 적용'}
           </button>
           
           {currentAdminPrice > 0 && (
@@ -235,7 +235,7 @@ const AdminPriceEditor = ({ item, part, onClose, currentUser }) => {
 
         <div className="sync-info">
           <small>
-            🌐 이 변경사항은 전 세계 모든 PC에서 즉시 반영됩니다.<br/>
+            🌐 이 변경사항은 모든 PC에서 즉시 반영됩니다.<br/>
             💾 GitHub에 자동 백업되며, 오프라인 시에는 온라인 복구 시 동기화됩니다.
           </small>
         </div>
