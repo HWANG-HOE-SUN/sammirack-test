@@ -570,48 +570,41 @@ const showInventoryResult = (result, documentType) => {
         message += `\n• 외 ${result.warnings.length - 3}개 부품...`;
       }
       
-      // 재고 부족 시 추가 안내
-      message += '\n\n재고 관리 탭에서 부족한 부품을 확인하고 보충하세요.';
+      // 재고 부족 시 컴포넌트 표시 제안
+      message += '\n\n재고 부족 상세 정보를 확인하시겠습니까?';
       
-      // 결과 표시 - 부족한 부품들의 정보와 함께 탭 이동
-      if (window.confirm(message + '\n\n재고 관리 탭으로 이동하시겠습니까?')) {
-        // ✅ 부족한 부품들의 정보를 함께 전달
+      // 결과 표시 - 부족한 부품들 컴포넌트 표시
+      if (window.confirm(message)) {
+        // ✅ 부족한 부품들의 정보를 정리
         const shortageInfo = result.warnings.map(w => ({
           name: w.name,
-          partId: w.partId,
+          partId: w.partId || w.name,
           required: w.required,
           available: w.available,
-          shortage: w.required - w.available
+          shortage: w.required - w.available,
+          rackType: w.rackType || '',
+          specification: w.specification || ''
         }));
         
-        // ✅ 커스텀 이벤트로 재고 관리 탭 이동 + 부족한 부품 정보 전달
-        window.dispatchEvent(new CustomEvent('showInventoryTabWithShortage', {
+        console.log('📋 재고 부족 정보:', shortageInfo);
+        
+        // ✅ 재고 부족 컴포넌트 표시 이벤트 발생
+        window.dispatchEvent(new CustomEvent('showShortageInventoryPanel', {
           detail: {
             shortageItems: shortageInfo,
-            documentType: documentType
+            documentType: documentType,
+            timestamp: Date.now()
           }
         }));
         
-        // ✅ 추가: 다른 방법으로도 시도 (라우터 이동)
-        try {
-          // React Router를 사용하는 경우
-          if (window.location.hash) {
-            window.location.hash = '#/inventory';
-          } else {
-            window.location.href = '/inventory';
-          }
-          
-          // ✅ 로컬스토리지에도 정보 저장 (백업용)
-          localStorage.setItem('inventoryShortageInfo', JSON.stringify({
-            shortageItems: shortageInfo,
-            timestamp: Date.now(),
-            documentType: documentType
-          }));
-          
-        } catch (error) {
-          console.error('재고 관리 탭 이동 실패:', error);
-          alert('재고 관리 탭으로 자동 이동할 수 없습니다. 수동으로 재고 관리 탭을 클릭해주세요.');
-        }
+        // ✅ 로컬스토리지에도 저장 (백업용)
+        localStorage.setItem('shortageInventoryData', JSON.stringify({
+          shortageItems: shortageInfo,
+          documentType: documentType,
+          timestamp: Date.now()
+        }));
+        
+        console.log('✅ 재고 부족 컴포넌트 표시 이벤트 발생');
       }
     } else {
       // 정상 완료는 간단히 alert
