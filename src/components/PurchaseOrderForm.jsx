@@ -52,7 +52,7 @@ const PurchaseOrderForm = () => {
   // 기존 저장 문서 로드
   useEffect(() => {
     if (isEditMode && id) {
-      const storageKey = `order_${id}`;
+      const storageKey = `purchase_${id}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         try { setFormData(JSON.parse(saved)); } catch {}
@@ -192,13 +192,13 @@ const PurchaseOrderForm = () => {
       return;
     }
     const itemId = isEditMode ? id : Date.now();
-    const storageKey = `order_${itemId}`;
+    const storageKey = `purchase_${itemId}`;
     const newOrder = {
       ...formData,
       id: itemId,
-      type: 'order',
+      type: 'purchase',
       status: formData.status || '진행 중',
-      orderNumber: formData.documentNumber,
+      purchaseNumber: formData.documentNumber,
       customerName: formData.companyName,
       productType: formData.items[0]?.name || '',
       quantity: formData.items.reduce((s, it) => s + (parseInt(it.quantity) || 0), 0),
@@ -224,7 +224,7 @@ const PurchaseOrderForm = () => {
       });
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {  // ← async 추가
     if (!formData.documentNumber.trim()) {
       alert('거래번호(문서번호)를 입력해주세요.');
       documentNumberInputRef.current?.focus();
@@ -270,7 +270,7 @@ const PurchaseOrderForm = () => {
                       onChange={e=>{
                         documentNumberInputRef.current?.classList.remove('invalid');
                         updateFormData('documentNumber', e.target.value);
-                        updateFormData('orderNumber', e.target.value);
+                        updateFormData('purchaseNumber', e.target.value);
                       }}
                       placeholder=""
                       style={{padding:'6px 8px', fontSize:'13px', width:'100%'}}

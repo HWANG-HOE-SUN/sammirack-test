@@ -1,5 +1,7 @@
 // src/components/ShortageInventoryPanel.jsx
 import React, { useState, useEffect } from 'react';
+import { generatePartId } from '../utils/unifiedPriceManager'; // ✅ 통일된 함수 import
+
 
 const ShortageInventoryPanel = ({ 
   isVisible, 
@@ -8,7 +10,7 @@ const ShortageInventoryPanel = ({
   documentType = '',
   isAdmin = false 
 }) => {
-  const [inventoryData, setInventoryData] = useState({});
+  const [inventory_data, set_inventory_data] = useState({});
   const [editingItems, setEditingItems] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -25,21 +27,21 @@ const ShortageInventoryPanel = ({
     setIsLoading(true);
     try {
       // 로컬스토리지에서 현재 재고 데이터 가져오기
-      const inventoryStorage = localStorage.getItem('inventoryData') || '{}';
+      const inventoryStorage = localStorage.getItem('inventory_data') || '{}';
       const currentInventory = JSON.parse(inventoryStorage);
       
       // 부족한 부품들의 현재 재고 정보만 추출
       const shortageInventory = {};
       shortageItems.forEach(item => {
-        const partId = item.partId || item.name;
+        const partId = generatePartId(item) || item.partId || item.name;
         shortageInventory[partId] = {
           ...item,
-          currentStock: currentInventory[partId]?.quantity || 0,
-          originalStock: currentInventory[partId]?.quantity || 0
+          currentStock: currentInventory[partId] || 0,  // ✅
+          originalStock: currentInventory[partId] || 0   // ✅
         };
       });
       
-      setInventoryData(shortageInventory);
+      set_inventory_data(shortageInventory);
       console.log('📦 재고 부족 데이터 로드:', shortageInventory);
     } catch (error) {
       console.error('재고 데이터 로드 실패:', error);
@@ -54,7 +56,7 @@ const ShortageInventoryPanel = ({
     
     const quantity = Math.max(0, parseInt(newQuantity) || 0);
     
-    setInventoryData(prev => ({
+    set_inventory_data(prev => ({
       ...prev,
       [partId]: {
         ...prev[partId],
@@ -77,7 +79,7 @@ const ShortageInventoryPanel = ({
     setIsLoading(true);
     try {
       // 현재 전체 재고 데이터 로드
-      const inventoryStorage = localStorage.getItem('inventoryData') || '{}';
+      const inventoryStorage = localStorage.getItem('inventory_data') || '{}';
       const currentInventory = JSON.parse(inventoryStorage);
       
       // 변경된 항목들 업데이트
@@ -90,13 +92,13 @@ const ShortageInventoryPanel = ({
           currentInventory[partId] = {
             quantity: editingItems[partId],
             lastUpdated: new Date().toISOString(),
-            name: inventoryData[partId]?.name || partId
+            name: inventory_data[partId]?.name || partId
           };
         }
       });
       
       // 로컬스토리지에 저장
-      localStorage.setItem('inventoryData', JSON.stringify(currentInventory));
+      localStorage.setItem('inventory_data', JSON.stringify(currentInventory));
       
       // 시스템 전체에 재고 업데이트 이벤트 발생
       window.dispatchEvent(new CustomEvent('inventoryUpdated', {
@@ -192,7 +194,7 @@ const ShortageInventoryPanel = ({
       {/* 재고 부족 목록 */}
       {!isLoading && (
         <div style={{ padding: '15px' }}>
-          {Object.entries(inventoryData).map(([partId, item]) => (
+          {Object.entries(inventory_data).map(([partId, item]) => (
             <div key={partId} style={{
               border: '1px solid #ddd',
               borderRadius: '5px',
