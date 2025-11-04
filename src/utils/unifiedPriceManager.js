@@ -23,6 +23,8 @@ const RACK_OPTIONS_KEY = 'rack_options_registry';
 const EXTRA_OPTIONS_PRICES_KEY = 'extra_options_prices';
 
 // ✅ 표준 partID 생성 함수 (단가 관리용 - 색상 제거)
+// NOTE: 하이랙의 경우, generatePartId는 priceKey와 동일한 역할을 수행합니다.
+// 그러나 기존 시그니처 보존을 위해 별도의 유틸리티 함수를 추가합니다.
 export const generatePartId = (item) => {
   if (!item) {
     console.warn('generatePartId: item이 undefined입니다');
@@ -61,6 +63,8 @@ export const generatePartId = (item) => {
 };
 
 // ✅ 재고 관리용 partID 생성 함수 (색상 포함)
+// NOTE: 하이랙의 경우, generateInventoryPartId는 stockKey와 동일한 역할을 수행합니다.
+// 그러나 기존 시그니처 보존을 위해 별도의 유틸리티 함수를 추가합니다.
 export const generateInventoryPartId = (item) => {
   if (!item) {
     console.warn('generateInventoryPartId: item이 undefined입니다');
@@ -87,6 +91,66 @@ export const generateInventoryPartId = (item) => {
   } else {
     return `${rackType}-${cleanName}-`;
   }
+};
+
+// =================================================================
+// 하이랙 전용: 단가-재고 키 분리 유틸리티 (Phase 3)
+// =================================================================
+
+/**
+ * 하이랙 부품의 가격키(priceKey)를 생성합니다.
+ * 가격키는 무게급 + 규격(W×D) + 높이 + 형식(독립/연결)로 구성되며, 색상을 포함하지 않습니다.
+ * @param {object} item - 부품 정보 객체
+ * @returns {string} priceKey
+ */
+export const generatePriceKey = (item) => {
+  if (!item || item.rackType !== '하이랙') {
+    // 하이랙이 아닌 경우 기존 partId를 사용하거나 에러 처리
+    return generatePartId(item);
+  }
+
+  const { name } = item;
+  
+  // 기존 generatePartId의 결과에 무게 정보를 추가하는 방식으로 구현합니다.
+  const basePartId = generatePartId(item);
+  
+  // 예시: name = "기둥 (독립형) H1500 270kg"
+  const weightMatch = String(name).match(/(\d+kg)/i);
+  const extractedWeight = weightMatch ? weightMatch[1].toLowerCase() : '';
+  
+  // 최종 priceKey: basePartId + extractedWeight
+  // 예: 하이랙-기둥(독립형)h1500-270kg
+  return `${basePartId}${extractedWeight}`;
+};
+
+/**
+ * 하이랙 부품의 재고키(stockKey)를 생성합니다.
+ * 재고키는 가격키 + 색상으로 구성됩니다.
+ * @param {object} item - 부품 정보 객체
+ * @returns {string} stockKey
+ */
+export const generateStockKey = (item) => {
+  if (!item || item.rackType !== '하이랙') {
+    // 하이랙이 아닌 경우 기존 InventoryPartId를 사용하거나 에러 처리
+    return generateInventoryPartId(item);
+  }
+
+  // 재고키는 색상을 포함한 generateInventoryPartId와 동일한 역할을 수행합니다.
+  // generateInventoryPartId는 이미 색상을 포함하고 있으므로,
+  // 여기에 무게 정보를 추가하여 명확한 stockKey를 생성합니다.
+  
+  const { name } = item;
+  
+  // 1. generateInventoryPartId 호출 (색상 포함)
+  const baseInventoryPartId = generateInventoryPartId(item);
+  
+  // 2. 무게급 추가 (기타정보: 무게)
+  const weightMatch = String(name).match(/(\d+kg)/i);
+  const extractedWeight = weightMatch ? weightMatch[1].toLowerCase() : '';
+  
+  // 최종 stockKey: baseInventoryPartId + extractedWeight
+  // 예: 하이랙-기둥(독립형)h1500메트그레이-270kg
+  return `${baseInventoryPartId}${extractedWeight}`;
 };
 
 // 랙옵션 고유 ID 생성
@@ -130,33 +194,54 @@ export const saveExtraOptionsPrice = (optionId, price) => {
   }
 };
 
-// 관리자 단가 저장
-export const saveAdminPrice = (partId, price, partInfo = {}) => {
-  try {
-    const prices = loadAdminPrices();
-    const oldPrice = prices[partId]?.price || 0;
-    
-    prices[partId] = {
-      price: Number(price),
-      ...partInfo,
-      updatedAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem(ADMIN_PRICES_KEY, JSON.stringify(prices));
-    
-    // 히스토리 저장
-    savePriceHistory(partId, oldPrice, price);
-    
-    return true;
-  } catch (error) {
-    console.error('단가 저장 실패:', error);
-    return false;
+// Gist 연동을 위해 realtimeAdminSync에서 saveAdminPriceSync를 가져옵니다.
+import { saveAdminPriceSync } from './realtimeAdminSync';
+
+// 관리자 단가 저장 (기존 시그니처 보존)
+export const saveAdminPrice = async (partId, price, partInfo = {}) => {
+  // saveAdminPriceSync는 partInfo에 priceKey 등을 포함하여 호출되어야 합니다.
+  // partInfo에 partId가 하이랙이 아닌 경우 priceKey를 partId로 설정합니다.
+  if (partInfo.rackType !== '하이랙') {
+    partInfo.priceKey = partId;
   }
+  
+  // unifiedPriceManager의 saveAdminPrice는 이제 realtimeAdminSync의 saveAdminPriceSync를 호출합니다.
+  // partInfo에 필요한 모든 컨텍스트 정보가 포함되어야 합니다.
+  // partInfo에 partId가 하이랙이 아닌 경우 priceKey를 partId로 설정합니다.
+  return await saveAdminPriceSync(partId, price, partInfo);
+};
+
+// Gist 연동을 위해 realtimeAdminSync에서 saveAdminPriceSync를 가져옵니다.
+import { saveAdminPriceSync } from './realtimeAdminSync';
+// 정본 partId 관리를 위해 canonicalPartIdManager를 가져옵니다.
+import { getCanonicalPartId, isDeprecatedPartId } from './canonicalPartIdManager';
+
+// 관리자 단가 저장 (기존 시그니처 보존)
+export const saveAdminPrice = async (partId, price, partInfo = {}) => {
+  // saveAdminPriceSync는 partInfo에 priceKey 등을 포함하여 호출되어야 합니다.
+  // partInfo에 partId가 하이랙이 아닌 경우 priceKey를 partId로 설정합니다.
+  if (partInfo.rackType !== '하이랙') {
+    partInfo.priceKey = partId;
+  }
+  
+  // unifiedPriceManager의 saveAdminPrice는 이제 realtimeAdminSync의 saveAdminPriceSync를 호출합니다.
+  // partInfo에 필요한 모든 컨텍스트 정보가 포함되어야 합니다.
+  // partInfo에 partId가 하이랙이 아닌 경우 priceKey를 partId로 설정합니다.
+  return await saveAdminPriceSync(partId, price, partInfo);
 };
 
 // ✅ 실제 사용할 단가 계산 (우선순위: 관리자 수정 > 기존 단가)
 export const getEffectivePrice = (item) => {
-  const partId = generatePartId(item);
+  // 1. partId 생성
+  let partId = generatePartId(item);
+  
+  // 2. 폐기 partId인 경우 정본 partId로 매핑 (게이트 로직)
+  if (isDeprecatedPartId(partId)) {
+    partId = getCanonicalPartId(partId);
+    // 경고 로깅 추가 (선택 사항)
+    console.warn(`⚠️ 폐기 partId 감지: ${generatePartId(item)} -> 정본 partId: ${partId}`);
+  }
+  
   const adminPrices = loadAdminPrices();
   
   if (adminPrices[partId]?.price > 0) {
@@ -382,42 +467,24 @@ export const loadAllMaterials = async () => {
   }
 };
 
-// 단가 히스토리 조회
-export const loadPriceHistory = (partId) => {
-  try {
-    const history = JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '[]');
-    if (partId) {
-      return history.filter(h => h.partId === partId);
-    }
-    return history;
-  } catch (error) {
-    console.error('히스토리 조회 실패:', error);
-    return [];
+// Gist 연동을 위해 realtimeAdminSync에서 loadPriceHistory를 가져옵니다.
+import { loadPriceHistory } from './realtimeAdminSync';
+
+// =================================================================
+// 단가 히스토리 (Gist 연동)
+// =================================================================
+
+// 단가 히스토리 조회 (realtimeAdminSync의 로컬 캐시 사용)
+export const loadPriceHistoryForPart = (partId) => {
+  const history = loadPriceHistory();
+  if (partId) {
+    return history.filter(h => h.partId === partId);
   }
+  return history;
 };
 
-// 단가 히스토리 저장
-export const savePriceHistory = (partId, oldPrice, newPrice, rackOption = '') => {
-  try {
-    const history = JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '[]');
-    history.push({
-      partId,
-      oldPrice,
-      newPrice,
-      rackOption,
-      timestamp: new Date().toISOString(),
-    });
-    
-    // 최근 100개만 보관
-    if (history.length > 100) {
-      history.splice(0, history.length - 100);
-    }
-    
-    localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(history));
-  } catch (error) {
-    console.error('히스토리 저장 실패:', error);
-  }
-};
+// savePriceHistory는 더 이상 사용하지 않습니다. (saveAdminPriceSync에서 처리)
+// export const savePriceHistory = ...
 
 export default {
   generatePartId,
@@ -427,12 +494,18 @@ export default {
   saveAdminPrice,
   getEffectivePrice,
   loadAllMaterials,
-  loadPriceHistory,
-  savePriceHistory,
+  loadPriceHistory: loadPriceHistoryForPart,
+  // savePriceHistory는 제거됨
   saveRackOptionsRegistry,
+  // ✅ 신규 추가
+  getCanonicalPartId,
+  isDeprecatedPartId,
   loadRackOptionsRegistry,
   getRackOptionComponents,
   getRackOptionsUsingPart,
   loadExtraOptionsPrices,
   saveExtraOptionsPrice,
+  // ✅ 신규 추가
+  generatePriceKey,
+  generateStockKey,
 };
