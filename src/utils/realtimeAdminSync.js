@@ -9,6 +9,7 @@ const INVENTORY_KEY = 'inventory_data';
 const ADMIN_PRICES_KEY = 'admin_edit_prices';
 const PRICE_HISTORY_KEY = 'admin_price_history';
 const ACTIVITY_LOG_KEY = 'admin_activity_log';
+import { generatePartId } from './unifiedPriceManager';
 
 class RealtimeAdminSync {
   constructor() {
@@ -18,9 +19,16 @@ class RealtimeAdminSync {
     
     this.API_BASE = 'https://api.github.com/gists';
     this.isOnline = navigator.onLine;
-    this.syncQueue = [];
-    this.retryCount = 0;
     this.maxRetries = 3;
+    
+    // ✅ Debounce용 변수
+    this.saveTimeout = null;
+    this.lastSaveTime = 0;
+    this.minSaveInterval = 5000; // 5초로 변경 (GitHub Secondary Rate Limit 회피)
+    
+    // ✅ 403 에러 추적 추가
+    this.consecutiveFailures = 0;
+    this.blockedUntil = 0;
     
     this.setupEventListeners();
     this.initBroadcastChannel();
@@ -74,7 +82,6 @@ class RealtimeAdminSync {
     window.addEventListener('online', () => {
       this.isOnline = true;
       console.log('📶 네트워크 연결됨 - 동기화 재시작');
-      this.processSyncQueue();
     });
 
     window.addEventListener('offline', () => {
@@ -104,64 +111,226 @@ class RealtimeAdminSync {
     }
   }
 
+  // ✅ Debounced 저장 (10초 모았다가 한 번만)
+  debouncedSave() {
+    // ✅ 차단 중이면 저장 예약만 하고 종료
+    const now = Date.now();
+    if (now < this.blockedUntil) {
+      const waitSeconds = Math.ceil((this.blockedUntil - now) / 1000);
+      console.log(`⏸️ GitHub 차단 중. ${waitSeconds}초 후 자동 재시도됩니다.`);
+      
+      if (!this.saveTimeout) {
+        this.saveTimeout = setTimeout(() => {
+          this.debouncedSave();
+        }, this.blockedUntil - now);
+      }
+      return;
+    }
+
+    // 기존 타이머 취소
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+
+    console.log('📥 저장 예약 (10초 후 실행)');
+
+    // 10초 후 저장 실행
+    this.saveTimeout = setTimeout(async () => {
+      const now = Date.now();
+      const timeSinceLastSave = now - this.lastSaveTime;
+
+      // 마지막 저장 후 10초 이상 경과했는지 확인
+      if (timeSinceLastSave < this.minSaveInterval) {
+        const waitTime = this.minSaveInterval - timeSinceLastSave;
+        console.log(`⏳ 너무 빠른 저장 요청. ${Math.ceil(waitTime/1000)}초 후 재시도`);
+        setTimeout(() => this.executeSave(), waitTime);
+        return;
+      }
+
+      await this.executeSave();
+    }, 10000);
+  }
+
+  // ✅ 실제 저장 실행 (Exponential Backoff 강화)
+  async executeSave() {
+    console.log('🔄 서버 저장 실행');
+    this.lastSaveTime = Date.now();
+
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        await this.saveToServer();
+        console.log('✅ 서버 저장 완료');
+        
+        // 성공 시 실패 카운터 리셋
+        this.consecutiveFailures = 0;
+        this.blockedUntil = 0;
+        
+        return true;
+      } catch (error) {
+        console.error(`❌ 저장 시도 ${attempt}/${this.maxRetries} 실패:`, error.message);
+
+        // 403 에러인 경우 - Secondary Rate Limit
+        if (error.message.includes('403')) {
+          this.consecutiveFailures++;
+          
+          // Exponential backoff 계산
+          const baseWait = 60000; // 기본 60초
+          const exponentialWait = baseWait * Math.pow(2, this.consecutiveFailures - 1);
+          const maxWait = 300000; // 최대 5분
+          const waitTime = Math.min(exponentialWait, maxWait);
+          
+          this.blockedUntil = Date.now() + waitTime;
+          
+          console.error('🚫 GitHub Secondary Rate Limit 감지');
+          console.error(`   연속 실패: ${this.consecutiveFailures}회`);
+          console.error(`   대기 시간: ${Math.ceil(waitTime/1000)}초`);
+          console.error(`   차단 해제: ${new Date(this.blockedUntil).toLocaleTimeString('ko-KR')}`);
+          
+          // 사용자에게 알림
+          window.dispatchEvent(new CustomEvent('githubBlocked', {
+            detail: {
+              waitSeconds: Math.ceil(waitTime/1000),
+              unblockTime: new Date(this.blockedUntil)
+            }
+          }));
+          
+          // 더 이상 재시도하지 않음 (차단 해제까지 대기)
+          break;
+        }
+
+        // 일반 에러인 경우 짧은 재시도
+        if (attempt < this.maxRetries) {
+          const waitTime = attempt * 3000; // 3초, 6초, 9초
+          console.log(`⏳ ${waitTime/1000}초 후 재시도...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    console.error('❌ 최대 재시도 횟수 초과. 저장 실패');
+    return false;
+  }
+
   // GitHub Gist에서 데이터 로드
   async loadFromServer() {
     if (!this.GIST_ID || !this.GITHUB_TOKEN) {
-      console.error('❌ GitHub 설정이 누락되었습니다. GIST_ID와 GITHUB_TOKEN을 설정하세요.');
-      return false;
+      console.error('❌ GitHub 설정이 누락되었습니다.');
+      console.error('   GIST_ID:', this.GIST_ID ? '설정됨' : '없음');
+      console.error('   TOKEN:', this.GITHUB_TOKEN ? `설정됨 (${this.GITHUB_TOKEN.substring(0, 4)}...)` : '없음');
+      throw new Error('GitHub 설정 오류: GIST_ID 또는 TOKEN이 없습니다.');
     }
-
+    
     try {
       console.log('🔄 GitHub 서버에서 데이터 로드 중...');
       
       const response = await fetch(`${this.API_BASE}/${this.GIST_ID}`, {
         headers: this.getHeaders()
       });
-
+  
       if (!response.ok) {
+        const errorText = await response.text();
         if (response.status === 401) {
-          throw new Error(`GitHub API 오류: ${response.status} - Bad credentials`);
+          throw new Error(`GitHub API 인증 실패 (401): Token 권한 확인 필요`);
         } else if (response.status === 404) {
-          throw new Error(`GitHub API 오류: ${response.status} - Gist를 찾을 수 없습니다.`);
+          throw new Error(`Gist를 찾을 수 없음 (404): GIST_ID 확인 필요`);
+        } else if (response.status === 403) {
+          if (errorText.includes('rate limit')) {
+            throw new Error(`Rate Limit 초과 (403)`);
+          } else {
+            throw new Error(`접근 거부 (403): GitHub Secondary Rate Limit 또는 Token 권한 문제`);
+          }
         } else {
-          const errorData = await response.text();
-          throw new Error(`GitHub API 오류: ${response.status} - ${errorData}`);
+          throw new Error(`GitHub API 오류 (${response.status}): ${errorText}`);
         }
       }
-
+  
       const gist = await response.json();
       
-      // 각 파일별로 데이터 복원
       if (gist.files) {
         if (gist.files['inventory.json']) {
           const inventoryData = JSON.parse(gist.files['inventory.json'].content);
           localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventoryData));
           this.broadcastUpdate('inventory-updated', inventoryData);
         }
-
+  
         if (gist.files['admin_prices.json']) {
-          const pricesData = JSON.parse(gist.files['admin_prices.json'].content);
-          localStorage.setItem(ADMIN_PRICES_KEY, JSON.stringify(pricesData));
-          this.broadcastUpdate('prices-updated', pricesData);
+          const serverPrices = JSON.parse(gist.files['admin_prices.json'].content);
+          const localPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
+          
+          const serverKeys = Object.keys(serverPrices);
+          const localKeys = Object.keys(localPrices);
+          
+          console.log(`💰 서버 단가: ${serverKeys.length}개`);
+          console.log(`💰 로컬 단가: ${localKeys.length}개`);
+          
+          let finalPrices = {};
+          let needsServerUpdate = false;
+          
+          const allPartIds = new Set([...serverKeys, ...localKeys]);
+          
+          for (const partId of allPartIds) {
+            const serverData = serverPrices[partId];
+            const localData = localPrices[partId];
+            
+            if (!serverData && !localData) {
+              continue;
+            } else if (!serverData && localData) {
+              // console.log(`💰 [${partId}] 로컬만 있음 → 서버 업로드 예정`);
+              finalPrices[partId] = localData;
+              needsServerUpdate = true;
+            } else if (serverData && !localData) {
+              // console.log(`💰 [${partId}] 서버만 있음 → 서버 데이터 사용`);
+              finalPrices[partId] = serverData;
+            } else {
+              const serverTime = new Date(serverData.timestamp || 0).getTime();
+              const localTime = new Date(localData.timestamp || 0).getTime();
+              
+              if (localTime > serverTime) {
+                // console.log(`💰 [${partId}] 로컬이 최신 (${new Date(localTime).toLocaleString()}) → 서버 업데이트 예정`);
+                finalPrices[partId] = localData;
+                needsServerUpdate = true;
+              } else {
+                // console.log(`💰 [${partId}] 서버가 최신 (${new Date(serverTime).toLocaleString()}) → 서버 데이터 사용`);
+                finalPrices[partId] = serverData;
+              }
+            }
+          }
+          
+          localStorage.setItem(ADMIN_PRICES_KEY, JSON.stringify(finalPrices));
+          this.broadcastUpdate('prices-updated', finalPrices);
+          
+          if (needsServerUpdate) {
+            console.log('💰 로컬 데이터를 서버에 즉시 업로드');
+            setTimeout(() => this.saveToServer(), 1000);
+          }
+        } else {
+          const localPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
+          const localKeys = Object.keys(localPrices);
+          
+          if (localKeys.length > 0) {
+            console.log(`💰 서버에 관리자 단가 파일 없음. 로컬 ${localKeys.length}개 항목을 서버에 업로드`);
+            setTimeout(() => this.saveToServer(), 1000);
+          }
         }
-
+  
         if (gist.files['price_history.json']) {
           const historyData = JSON.parse(gist.files['price_history.json'].content);
           localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(historyData));
         }
-
+  
         if (gist.files['activity_log.json']) {
           const activityData = JSON.parse(gist.files['activity_log.json'].content);
           localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(activityData));
         }
       }
-
+  
       console.log('✅ GitHub 서버 데이터 로드 완료');
       return true;
       
     } catch (error) {
       console.error('❌ GitHub 서버 데이터 로드 실패:', error);
-      return false;
+      console.error('   에러 상세:', error.message);
+      throw error;
     }
   }
 
@@ -180,7 +349,6 @@ class RealtimeAdminSync {
 
       const userIP = await this.getUserIP();
       
-      // 활동 로그 추가
       activityLog.unshift({
         timestamp: new Date().toISOString(),
         action: 'data_sync',
@@ -188,7 +356,6 @@ class RealtimeAdminSync {
         dataTypes: ['inventory', 'prices', 'history']
       });
 
-      // 로그 최대 1000개 유지
       if (activityLog.length > 1000) {
         activityLog.splice(1000);
       }
@@ -223,58 +390,13 @@ class RealtimeAdminSync {
 
       console.log('✅ GitHub 서버에 데이터 저장 완료');
       
-      // 로컬에 활동 로그 저장
       localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(activityLog));
       
       return true;
       
     } catch (error) {
       console.error('❌ GitHub 서버 저장 실패:', error);
-      
-      // 실패한 요청을 큐에 추가
-      this.addToSyncQueue('save', {});
-      
-      return false;
-    }
-  }
-
-  // 동기화 큐에 추가
-  addToSyncQueue(action, data) {
-    this.syncQueue.push({
-      action,
-      data,
-      timestamp: Date.now(),
-      retries: 0
-    });
-  }
-
-  // 동기화 큐 처리
-  async processSyncQueue() {
-    if (!this.isOnline || this.syncQueue.length === 0) return;
-
-    console.log(`🔄 동기화 큐 처리 중... (${this.syncQueue.length}개 대기)`);
-
-    const toProcess = [...this.syncQueue];
-    this.syncQueue = [];
-
-    for (const item of toProcess) {
-      try {
-        if (item.action === 'save') {
-          await this.saveToServer();
-        } else if (item.action === 'load') {
-          await this.loadFromServer();
-        }
-      } catch (error) {
-        console.error('동기화 큐 처리 실패:', error);
-        
-        // 재시도 횟수 증가
-        item.retries++;
-        
-        // 최대 재시도 횟수 미만이면 다시 큐에 추가
-        if (item.retries < this.maxRetries) {
-          this.syncQueue.push(item);
-        }
-      }
+      throw error;
     }
   }
 
@@ -289,7 +411,6 @@ class RealtimeAdminSync {
       });
     }
 
-    // DOM 이벤트도 발생
     window.dispatchEvent(new CustomEvent(`${type.replace('-', '')}`, {
       detail: { data, source: this.getInstanceId() }
     }));
@@ -298,13 +419,11 @@ class RealtimeAdminSync {
   // 업데이트 핸들러들
   handleInventoryUpdate(data) {
     console.log('📦 실시간 재고 업데이트 수신:', data);
-    // 필요시 UI 갱신 이벤트 발생
     window.dispatchEvent(new CustomEvent('inventoryUpdated', { detail: data }));
   }
 
   handlePricesUpdate(data) {
     console.log('💰 실시간 단가 업데이트 수신:', data);
-    // 필요시 UI 갱신 이벤트 발생
     window.dispatchEvent(new CustomEvent('adminPricesUpdated', { detail: data }));
   }
 
@@ -324,29 +443,22 @@ export const initRealtimeSync = () => {
   return syncInstance;
 };
 
-// adminSyncManager export (Login.jsx에서 사용)
 export const adminSyncManager = {
   getInstance: () => syncInstance || initRealtimeSync()
 };
 
-// 재고 저장 함수
 export const saveInventorySync = async (partId, quantity, userInfo = {}) => {
   try {
-    // 로컬 저장
     const inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || '{}');
-    inventory[partId] = quantity;
+    // ✅ 수정: 숫자 형식으로 저장 (객체가 아닌 순수 숫자값)
+    inventory[partId] = Number(quantity);
     localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
-
-    // 브로드캐스트
     if (syncInstance) {
       syncInstance.broadcastUpdate('inventory-updated', { [partId]: quantity });
     }
-
-    // 서버 저장
     if (syncInstance) {
-      await syncInstance.saveToServer();
+      syncInstance.debouncedSave();
     }
-
     return true;
   } catch (error) {
     console.error('재고 저장 실패:', error);
@@ -354,7 +466,6 @@ export const saveInventorySync = async (partId, quantity, userInfo = {}) => {
   }
 };
 
-// 재고 로드 함수
 export const loadInventory = () => {
   try {
     const stored = localStorage.getItem(INVENTORY_KEY) || '{}';
@@ -365,28 +476,13 @@ export const loadInventory = () => {
   }
 };
 
-// 강제 서버 동기화
 export const forceServerSync = async () => {
   if (syncInstance) {
     await syncInstance.loadFromServer();
-    await syncInstance.saveToServer();
   }
 };
 
-// 부품 고유 ID 생성 (안전 체크 추가)
-export const generatePartId = (item) => {
-  if (!item) {
-    console.warn('generatePartId: item이 undefined입니다');
-    return 'unknown-part';
-  }
-  
-  const { rackType = '', name = '', specification = '' } = item;
-  const cleanName = String(name).replace(/[^\w가-힣]/g, '');
-  const cleanSpec = String(specification).replace(/[^\w가-힣]/g, '');
-  return `${rackType}-${cleanName}-${cleanSpec}`.toLowerCase();
-};
 
-// 관리자 단가 로드
 export const loadAdminPrices = () => {
   try {
     const stored = localStorage.getItem(ADMIN_PRICES_KEY) || '{}';
@@ -397,10 +493,8 @@ export const loadAdminPrices = () => {
   }
 };
 
-// 관리자 단가 저장 (실시간 동기화)
 export const saveAdminPriceSync = async (partId, price, partInfo = {}, userInfo = {}) => {
   try {
-    // 로컬 저장
     const adminPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
     
     if (price && price > 0) {
@@ -411,20 +505,17 @@ export const saveAdminPriceSync = async (partId, price, partInfo = {}, userInfo 
         partInfo
       };
     } else {
-      // 가격이 0이면 삭제 (기본값 사용)
       delete adminPrices[partId];
     }
 
     localStorage.setItem(ADMIN_PRICES_KEY, JSON.stringify(adminPrices));
 
-    // 브로드캐스트
     if (syncInstance) {
       syncInstance.broadcastUpdate('prices-updated', adminPrices);
     }
 
-    // 서버 저장
     if (syncInstance) {
-      await syncInstance.saveToServer();
+      syncInstance.debouncedSave();
     }
 
     return true;
@@ -434,7 +525,6 @@ export const saveAdminPriceSync = async (partId, price, partInfo = {}, userInfo 
   }
 };
 
-// 자동 초기화
 if (typeof window !== 'undefined') {
   initRealtimeSync();
 }

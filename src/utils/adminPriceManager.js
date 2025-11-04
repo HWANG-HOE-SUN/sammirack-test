@@ -2,18 +2,19 @@
  * 관리자 단가 데이터 관리 유틸리티
  * localStorage와 JSON 파일 백업 기능을 제공합니다.
  */
+import { generatePartId } from './unifiedPriceManager';
 
 // 관리자 단가 데이터 키
 const ADMIN_PRICES_KEY = 'admin_edit_prices';
 const PRICE_HISTORY_KEY = 'admin_price_history';
 
 // 부품 고유 ID 생성 (다른 컴포넌트와 동일한 로직 사용)
-export const generatePartId = (item) => {
-  const { rackType, name, specification } = item;
-  const cleanName = name.replace(/[^\w가-힣]/g, '');
-  const cleanSpec = (specification || '').replace(/[^\w가-힣]/g, '');
-  return `${rackType}-${cleanName}-${cleanSpec}`.toLowerCase();
-};
+// export const generatePartId = (item) => {
+//   const { rackType, name, specification } = item;
+//   const cleanName = name.replace(/[^\w가-힣]/g, '');
+//   const cleanSpec = (specification || '').replace(/[^\w가-힣]/g, '');
+//   return `${rackType}-${cleanName}-${cleanSpec}`.toLowerCase();
+// };
 
 // 관리자 수정 단가 로드
 export const loadAdminPrices = () => {

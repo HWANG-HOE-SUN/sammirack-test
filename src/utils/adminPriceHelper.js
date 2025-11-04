@@ -1,15 +1,16 @@
 // 관리자 단가 적용을 위한 헬퍼 유틸
 // 기존 adminPriceEditor / BOMDisplay 와 동일한 ID 규칙 사용
+import { generatePartId } from './unifiedPriceManager';
 
-export const generatePartId = (item) => {
-  if (!item) return '';
-  const rackType = item.rackType || '';
-  const name = item.name || '';
-  const specification = item.specification || '';
-  const cleanName = String(name).replace(/[^\w가-힣]/g, '');
-  const cleanSpec = String(specification).replace(/[^\w가-힣]/g, '');
-  return `${rackType}-${cleanName}-${cleanSpec}`.toLowerCase();
-};
+// export const generatePartId = (item) => {
+//   if (!item) return '';
+//   const rackType = item.rackType || '';
+//   const name = item.name || '';
+//   const specification = item.specification || '';
+//   const cleanName = String(name).replace(/[^\w가-힣]/g, '');
+//   const cleanSpec = String(specification).replace(/[^\w가-힣]/g, '');
+//   return `${rackType}-${cleanName}-${cleanSpec}`.toLowerCase();
+// };
 
 // adminPrices: localStorage에서 로드한 맵
 // item: { rackType, name, specification, unitPrice, quantity ... }

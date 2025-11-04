@@ -1,7 +1,7 @@
 // src/utils/excelExport.js
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { deductInventoryOnPrint } from '../components/InventoryManager.jsx';
+import { deductInventoryOnPrint, showInventoryResult } from '../components/InventoryManager.jsx';
 
 /** ---------------------------
  *  공통 유틸
@@ -542,78 +542,6 @@ export const exportDeliveryWithInventory = async (formData, cartData, fileName) 
   } catch (error) {
     console.error('거래명세서 출력 실패:', error);
     throw error;
-  }
-};
-
-/**
- * 재고 감소 결과 사용자에게 표시
- */
-const showInventoryResult = (result, documentType) => {
-  if (!result) return;
-  
-  let message = `📄 ${documentType} 출력 완료\n`;
-  
-  if (result.success) {
-    message += `📦 재고 감소: ${result.deductedParts.length}개 부품 처리`;
-    
-    if (result.warnings.length > 0) {
-      message += `\n⚠️ 재고 부족 경고: ${result.warnings.length}개 부품`;
-      
-      // 재고 부족 부품 상세 (최대 3개)
-      const warningDetails = result.warnings.slice(0, 3).map(w => 
-        `• ${w.name}: 필요 ${w.required}개, 가용 ${w.available}개`
-      ).join('\n');
-      
-      message += '\n' + warningDetails;
-      
-      if (result.warnings.length > 3) {
-        message += `\n• 외 ${result.warnings.length - 3}개 부품...`;
-      }
-      
-      // 재고 부족 시 컴포넌트 표시 제안
-      message += '\n\n재고 부족 상세 정보를 확인하시겠습니까?';
-      
-      // 결과 표시 - 부족한 부품들 컴포넌트 표시
-      if (window.confirm(message)) {
-        // ✅ 부족한 부품들의 정보를 정리
-        const shortageInfo = result.warnings.map(w => ({
-          name: w.name,
-          partId: w.partId || w.name,
-          required: w.required,
-          available: w.available,
-          shortage: w.required - w.available,
-          rackType: w.rackType || '',
-          specification: w.specification || ''
-        }));
-        
-        console.log('📋 재고 부족 정보:', shortageInfo);
-        
-        // ✅ 재고 부족 컴포넌트 표시 이벤트 발생
-        window.dispatchEvent(new CustomEvent('showShortageInventoryPanel', {
-          detail: {
-            shortageItems: shortageInfo,
-            documentType: documentType,
-            timestamp: Date.now()
-          }
-        }));
-        
-        // ✅ 로컬스토리지에도 저장 (백업용)
-        localStorage.setItem('shortageInventoryData', JSON.stringify({
-          shortageItems: shortageInfo,
-          documentType: documentType,
-          timestamp: Date.now()
-        }));
-        
-        console.log('✅ 재고 부족 컴포넌트 표시 이벤트 발생');
-      }
-    } else {
-      // 정상 완료는 간단히 alert
-      alert(message);
-    }
-    
-  } else {
-    message += `❌ 재고 감소 실패: ${result.message}`;
-    alert(message);
   }
 };
 
