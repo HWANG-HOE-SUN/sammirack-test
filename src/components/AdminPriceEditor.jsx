@@ -1,10 +1,10 @@
-// src/components/AdminPriceEditor.jsx (변동이력 기능 포함)
+// src/components/AdminPriceEditor.jsx (변동이력 기능 포함, 부품ID 표시 추가)
 import React, { useState, useEffect } from 'react';
 import { 
   saveAdminPriceSync, 
   loadAdminPrices, 
-  generatePartId 
 } from '../utils/realtimeAdminSync';
+import { generatePartId } from '../utils/unifiedPriceManager'; // ✅ 통일된 함수 import
 
 // 변동 이력 관리 함수들
 const loadPriceHistory = (partId) => {
@@ -272,6 +272,17 @@ const AdminPriceEditor = ({ item, part, onClose, currentUser, onSave }) => {
     }
   };
 
+  const copyPartIdToClipboard = () => {
+    try {
+      navigator.clipboard.writeText(partId);
+      setMessage('부품ID가 클립보드에 복사되었습니다.');
+      setTimeout(() => setMessage(''), 2000);
+    } catch {
+      setMessage('부품ID 복사에 실패했습니다.');
+      setTimeout(() => setMessage(''), 2000);
+    }
+  };
+
   return (
     <div className="admin-price-editor-overlay">
       <div className="admin-price-editor">
@@ -314,6 +325,16 @@ const AdminPriceEditor = ({ item, part, onClose, currentUser, onSave }) => {
                   <span className="value">{targetPart.specification}</span>
                 </div>
               )}
+
+              {/* 부품ID 표시 추가 */}
+              <div className="info-row">
+                <span className="label">부품 ID:</span>
+                <span className="value part-id">
+                  <code style={{background: '#f1f3f5', padding: '4px 8px', borderRadius: '4px', fontSize: '13px'}}>{partId}</code>
+                  <button onClick={copyPartIdToClipboard} className="copy-btn" title="부품ID 복사" style={{marginLeft: '8px'}}>복사</button>
+                </span>
+              </div>
+
               <div className="info-row">
                 <span className="label">기본 단가:</span>
                 <span className="value">{(targetPart.unitPrice || 0).toLocaleString()}원</span>
@@ -538,6 +559,7 @@ const AdminPriceEditor = ({ item, part, onClose, currentUser, onSave }) => {
           display: flex;
           justify-content: space-between;
           margin-bottom: 8px;
+          align-items: center;
         }
 
         .info-row:last-child {
@@ -668,6 +690,20 @@ const AdminPriceEditor = ({ item, part, onClose, currentUser, onSave }) => {
 
         .cancel-btn:hover {
           background: #5a6268;
+        }
+
+        .copy-btn {
+          background: #007bff;
+          color: white;
+          border: none;
+          padding: 6px 10px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 13px;
+        }
+
+        .copy-btn:hover {
+          background: #0069d9;
         }
 
         .sync-info {

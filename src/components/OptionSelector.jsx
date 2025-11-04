@@ -39,11 +39,29 @@ export default function OptionSelector() {
 
   useEffect(() => setApplyRateInput(applyRate), [applyRate]);
 
-  // 추가옵션 가격 로드
+  // 추가옵션 가격 로드 함수
+  const loadExtraOptionsData = () => {
+    try {
+      const prices = loadExtraOptionsPrices() || {};
+      // normalize keys to string for consistent lookup (opt.id may be number or string)
+      const normalized = {};
+      Object.keys(prices).forEach(k => {
+        normalized[String(k)] = prices[k];
+      });
+      setExtraOptionsPrices(normalized);
+      console.log('OptionSelector: 추가옵션 가격 로드 완료', Object.keys(normalized).length);
+    } catch (error) {
+      console.error('추가옵션 가격 로드 실패:', error);
+      setExtraOptionsPrices({});
+    }
+  };
+
+  // 초기 로드 및 extraProducts/selectedType 변경시 재로딩
   useEffect(() => {
     loadExtraOptionsData();
-  }, []);
-  
+    // if extraProducts changes we want to ensure prices are re-applied to UI
+  }, [extraProducts, selectedType]);
+
   // 추가옵션 가격 변경 이벤트 리스너 추가
   useEffect(() => {
     const handleExtraOptionsChange = () => {
@@ -59,28 +77,18 @@ export default function OptionSelector() {
       window.removeEventListener('adminPriceChanged', handleExtraOptionsChange);
     };
   }, []);
-  
-  // 추가옵션 가격 로드 함수
-  const loadExtraOptionsData = () => {
-    try {
-      const prices = loadExtraOptionsPrices();
-      setExtraOptionsPrices(prices);
-      console.log('OptionSelector: 추가옵션 가격 로드 완료', Object.keys(prices).length);
-    } catch (error) {
-      console.error('추가옵션 가격 로드 실패:', error);
-      setExtraOptionsPrices({});
-    }
-  };
-  
+
   // 추가옵션의 실제 가격 계산 (관리자 수정 단가 반영)
   const getExtraOptionPrice = (opt) => {
-    const adminPrice = extraOptionsPrices[opt.id]?.price;
-    if (adminPrice && adminPrice > 0) {
-      return adminPrice;
-    }
-    return Number(opt.price) || 0;
+    if (!opt) return 0;
+    const key = String(opt.id);
+    const adminEntry = extraOptionsPrices[key];
+    const adminPrice = adminEntry && (Number(adminEntry.price) || 0);
+    const basePrice = Number(opt.price) || 0;
+    // 관리자 단가가 유효(양수)하면 우선 사용, 아니면 기본가격 사용
+    return (adminPrice && adminPrice > 0) ? adminPrice : basePrice;
   };
-    
+
   // 관리자 단가가 반영된 실시간 가격 계산 (fallback 포함)
   const calculateRealTimePrice = () => {
     if (!currentBOM || currentBOM.length === 0) {
@@ -91,12 +99,16 @@ export default function OptionSelector() {
     let hasAdminPrice = false;
     
     currentBOM.forEach(item => {
-      const adminPrice = localStorage.getItem(`adminPrice_${item.id}`);
-      if (adminPrice !== null && !isNaN(parseInt(adminPrice)) && parseInt(adminPrice) > 0) {
+      // localStorage may contain adminPrice_{id} OR unified extra price store is used (we try both)
+      const localKey = `adminPrice_${item.id}`;
+      const adminLocal = localStorage.getItem(localKey);
+      const adminLocalNum = adminLocal !== null && !isNaN(parseInt(adminLocal)) ? parseInt(adminLocal) : null;
+
+      if (adminLocalNum !== null && adminLocalNum > 0) {
         hasAdminPrice = true;
-        totalPrice += parseInt(adminPrice) * (item.quantity || 0);
+        totalPrice += adminLocalNum * (item.quantity || 0);
       } else {
-        // 관리자 단가가 없으면 기본 item.price 사용
+        // fallback to item.price
         totalPrice += (item.price || 0) * (item.quantity || 0);
       }
     });
@@ -151,7 +163,7 @@ export default function OptionSelector() {
     const newPrice = calculateRealTimePrice();
     setRealTimePrice(newPrice);
   }, [currentBOM]);
-  
+
   const onApplyRateChange = e => {
     const v = e.target.value;
     if (v === '' || /^[0-9]{1,3}$/.test(v)) {
@@ -214,8 +226,10 @@ export default function OptionSelector() {
   };
 
   const toggleExtra = id => {
-    if (!id) return;
-    if (extraOptionsSel.includes(id)) {
+    if (id === undefined || id === null) return;
+    // normalize id type to match what extraOptionsSel contains (assume same type)
+    const isChecked = extraOptionsSel.includes(id);
+    if (isChecked) {
       handleExtraOptionChange(extraOptionsSel.filter(e => e !== id));
     } else {
       handleExtraOptionChange([...extraOptionsSel, id]);
@@ -230,6 +244,15 @@ export default function OptionSelector() {
       ? Object.entries(extraProducts[selectedType])
       : [];
 
+  console.log('🔍 추가옵션 디버깅:', {
+    selectedType,
+    extraProducts,
+    extraProductsForType: extraProducts ? extraProducts[selectedType] : undefined,
+    extraCatList,
+    extraCatListLength: extraCatList.length,
+    extraOptionsPricesLength: Object.keys(extraOptionsPrices).length
+  });
+    
   // 가격 표시 여부 결정 - 필수 옵션이 모두 선택된 경우만 표시
   const showPrice = selectedType && (
     (formTypeRacks.includes(selectedType) && 
@@ -375,15 +398,15 @@ export default function OptionSelector() {
         style={{ margin: '10px 0' }}
         disabled={!selectedType}
       >
-        {extraOpen ? '추가옵션 숨기기' : '추가옵션 보기'}
+        {extraOpen ? '기타추가옵션 숨기기' : '기타추가옵션 보기'}
       </button>
 
       {extraOpen && selectedType && (
         <div>
-          {/* 추가옵션 표시 로직 */}
+          {/* 기타추가옵션 표시 로직 */}
           {extraCatList.length > 0 && (
             <div>
-              <h4>추가옵션</h4>
+              <h4>기타추가옵션</h4>
               {extraCatList.map(([cat, arr]) => (
                 <div key={cat} style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>
@@ -391,12 +414,16 @@ export default function OptionSelector() {
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {Array.isArray(arr) && arr.map(opt => {
+                      // ensure consistent id type for lookup
+                      const keyId = String(opt.id);
                       const isChecked = extraOptionsSel.includes(opt.id);
                       const effectivePrice = getExtraOptionPrice(opt);
-                      const isModified = extraOptionsPrices[opt.id] && extraOptionsPrices[opt.id].price > 0;
+                      const basePrice = Number(opt.price) || 0;
+                      const adminEntry = extraOptionsPrices[keyId];
+                      const isModified = adminEntry && (Number(adminEntry.price) || 0) > 0 && Number(adminEntry.price) !== basePrice;
                       
                       return (
-                        <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <label key={keyId} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <input
                             type="checkbox"
                             checked={isChecked}

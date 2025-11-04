@@ -52,7 +52,7 @@ const DeliveryNoteForm = () => {
   // 기존 저장 데이터 로드
   useEffect(() => {
     if (isEditMode && id) {
-      const storageKey = `delivery_note_${id}`;
+      const storageKey = `delivery_${id}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         try { setFormData(JSON.parse(saved)); } catch {}
@@ -159,7 +159,7 @@ const DeliveryNoteForm = () => {
       return;
     }
     const itemId=isEditMode?id:Date.now();
-    const storageKey=`delivery_note_${itemId}`;
+    const storageKey=`delivery_${itemId}`;
     const newDoc={
       ...formData,
       id:itemId,
@@ -191,7 +191,7 @@ const DeliveryNoteForm = () => {
       });
   };
 
-  const handlePrint=()=>{
+  const handlePrint = async () => {  // ← async 추가
     if(!formData.documentNumber.trim()){
       alert('거래번호(문서번호)를 입력해주세요.');
       documentNumberInputRef.current?.focus();

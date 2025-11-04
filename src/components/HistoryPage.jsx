@@ -4,7 +4,7 @@ import '../styles/HistoryPage.css';
 /**
  * HistoryPage component for managing estimates, purchase orders, and delivery notes
  * Features:
- * - View history of estimates, orders, and delivery notes
+ * - View history of estimates, purchase (orders), and delivery (notes)
  * - Filter by type, customer name, date range, etc.
  * - Convert estimates to orders
  * - Print documents including delivery notes
@@ -17,7 +17,7 @@ const HistoryPage = () => {
   const [filteredItems, setFilteredItems] = useState([]);
   // State for filters
   const [filters, setFilters] = useState({
-    documentType: 'all', // 'all', 'estimate', 'order', 'delivery_note'
+    documentType: 'all', // 'all', 'estimate', 'purchase', 'delivery'
     documentNumber: '',
     dateFrom: '',
     dateTo: '',
@@ -48,8 +48,8 @@ const HistoryPage = () => {
         const key = localStorage.key(i);
         if (
           key.startsWith('estimate_') || 
-          key.startsWith('order_') || 
-          key.startsWith('delivery_note_')
+          key.startsWith('purchase_') || 
+          key.startsWith('delivery_')
         ) {
           try {
             const item = JSON.parse(localStorage.getItem(key));
@@ -89,7 +89,7 @@ const HistoryPage = () => {
       const searchTerm = filters.documentNumber.toLowerCase();
       filtered = filtered.filter(item => 
         (item.estimateNumber && item.estimateNumber.toLowerCase().includes(searchTerm)) ||
-        (item.orderNumber && item.orderNumber.toLowerCase().includes(searchTerm)) ||
+        (item.purchaseNumber && item.purchaseNumber.toLowerCase().includes(searchTerm)) ||
         (item.documentNumber && item.documentNumber.toLowerCase().includes(searchTerm))
       );
     }
@@ -148,8 +148,8 @@ const HistoryPage = () => {
     if (!item || !item.id || !item.type) return;
     
     const confirmDelete = window.confirm(
-      `정말로 이 ${item.type === 'estimate' ? '견적서' : item.type === 'order' ? '청구서' : '거래명세서'}를 삭제하시겠습니까? 
-      ${item.type === 'estimate' ? item.estimateNumber : item.type === 'order' ? item.orderNumber : item.documentNumber || ''}`
+      `정말로 이 ${item.type === 'estimate' ? '견적서' : item.type === 'purchase' ? '청구서' : '거래명세서'}를 삭제하시겠습니까? 
+      ${item.type === 'estimate' ? item.estimateNumber : item.type === 'purchase' ? item.purchaseNumber : item.documentNumber || ''}`
     );
     
     if (confirmDelete) {
@@ -171,9 +171,9 @@ const HistoryPage = () => {
     }
   };
   /**
-   * Convert an estimate to an order
+   * Convert an estimate to an purchase
    */
-  const convertToOrder = (estimate) => {
+  const convertToPurchase = (estimate) => {
     navigate(`/purchase-order/new`, { state: { fromEstimate: estimate } });
   };
   /**
@@ -182,11 +182,15 @@ const HistoryPage = () => {
   const editItem = (item) => {
     if (!item || !item.type) return;
     
+    // 견적서와 청구서의 편집 버튼 클릭 시, 문서 편집 화면으로 이동하도록 수정
     if (item.type === 'estimate') {
+      // EstimateForm은 OptionSelector를 거치지 않고 바로 편집 모드로 진입해야 함
       navigate(`/estimate/edit/${item.id}`, { state: { item } });
-    } else if (item.type === 'order') {
+    } else if (item.type === 'purchase') {
+      // PurchaseOrderForm은 OptionSelector를 거치지 않고 바로 편집 모드로 진입해야 함
       navigate(`/purchase-order/edit/${item.id}`, { state: { item } });
-    } else if (item.type === 'delivery_note') {
+    } else if (item.type === 'delivery') {
+      // DeliveryNoteForm은 OptionSelector를 거치지 않고 바로 편집 모드로 진입해야 함
       navigate(`/delivery-note/edit/${item.id}`, { state: { item } });
     }
   };
@@ -324,7 +328,7 @@ const HistoryPage = () => {
         </body>
         </html>
       `;
-    } else if (item.type === 'delivery_note') {
+    } else if (item.type === 'delivery') {
       // 거래명세서 인쇄용 HTML (견적서와 디자인 동일)
       printHTML = `
         <!DOCTYPE html>
@@ -447,7 +451,7 @@ const HistoryPage = () => {
         </body>
         </html>
       `;
-    } else if (item.type === 'order') {
+    } else if (item.type === 'purchase') {
       // 청구서 인쇄용 HTML
       printHTML = `
         <!DOCTYPE html>
@@ -472,8 +476,8 @@ const HistoryPage = () => {
         </head>
         <body>
           <div class="print-header">
-            <h1>발&nbsp;&nbsp;&nbsp;&nbsp;주&nbsp;&nbsp;&nbsp;&nbsp;서</h1>
-            <div>거래번호: ${printData.orderNumber || ''}</div>
+            <h1>청&nbsp;&nbsp;&nbsp;&nbsp;구&nbsp;&nbsp;&nbsp;&nbsp;서</h1>
+            <div>거래번호: ${printData.purchaseNumber || ''}</div>
           </div>
 
           <table class="info-table">
@@ -482,7 +486,7 @@ const HistoryPage = () => {
                 <td class="label">거래일자</td>
                 <td>${printData.date}</td>
                 <td class="label">거래번호</td>
-                <td>${printData.orderNumber || ''}</td>
+                <td>${printData.purchaseNumber || ''}</td>
               </tr>
               <tr>
                 <td class="label">상호명</td>
@@ -688,7 +692,7 @@ const HistoryPage = () => {
       <div className="item-details">
         <div className="details-header">
           <h2>
-            {isEstimate ? '견적서' : selectedItem.type === 'order' ? '청구서' : '거래명세서'} 상세정보 
+            {isEstimate ? '견적서' : selectedItem.type === 'purchase' ? '청구서' : '거래명세서'} 상세정보 
             <span className={`status-badge ${getStatusClass(selectedItem.status)}`}>
               {selectedItem.status || '진행 중'}
             </span>
@@ -702,10 +706,10 @@ const HistoryPage = () => {
             <div className="details-grid">
               <div className="details-item">
                 <strong>
-                  {isEstimate ? '거래번호' : selectedItem.type === 'order' ? '주문번호' : '거래명세서 번호'}:
+                  {isEstimate ? '거래번호' : selectedItem.type === 'purchase' ? '주문번호' : '거래명세서 번호'}:
                 </strong>
                 <span>
-                  {isEstimate ? selectedItem.estimateNumber : selectedItem.type === 'order' ? selectedItem.orderNumber : selectedItem.documentNumber || ''}
+                  {isEstimate ? selectedItem.estimateNumber : selectedItem.type === 'purchase' ? selectedItem.purchaseNumber : selectedItem.documentNumber || ''}
                 </span>
               </div>
               <div className="details-item">
@@ -720,7 +724,7 @@ const HistoryPage = () => {
                 <strong>연락처:</strong>
                 <span>{selectedItem.contactInfo}</span>
               </div>
-              {!isEstimate && selectedItem.estimateNumber && selectedItem.type !== 'delivery_note' && (
+              {!isEstimate && selectedItem.estimateNumber && selectedItem.type !== 'delivery' && (
                 <div className="details-item">
                   <strong>관련 거래번호:</strong>
                   <span>{selectedItem.estimateNumber}</span>
@@ -762,7 +766,7 @@ const HistoryPage = () => {
             </div>
           </div>
           
-          {selectedItem.type === 'order' && (
+          {selectedItem.type === 'purchase' && (
             <div className="details-section">
               <h3>배송 정보</h3>
               <div className="details-grid">
@@ -822,7 +826,7 @@ const HistoryPage = () => {
                 인쇄
               </button>
               {isEstimate && (
-                <button onClick={() => convertToOrder(selectedItem)}>
+                <button onClick={() => convertToPurchase(selectedItem)}>
                   청구서 생성
                 </button>
               )}
@@ -866,10 +870,10 @@ const HistoryPage = () => {
             }}
           >
             <div className="item-cell document-type">
-              {item.type === 'estimate' ? '견적서' : item.type === 'order' ? '청구서' : '거래명세서'}
+              {item.type === 'estimate' ? '견적서' : item.type === 'purchase' ? '청구서' : '거래명세서'}
             </div>
             <div className="item-cell document-id">
-              {item.type === 'estimate' ? item.estimateNumber : item.type === 'order' ? item.orderNumber : item.documentNumber || ''}
+              {item.type === 'estimate' ? item.estimateNumber : item.type === 'purchase' ? item.purchaseNumber : item.documentNumber || ''}
             </div>
             <div className="item-cell date">
               {formatDate(item.date)}
@@ -898,7 +902,7 @@ const HistoryPage = () => {
               {item.type === 'estimate' && (
                 <button 
                   title="청구서 생성" 
-                  onClick={(e) => { e.stopPropagation(); convertToOrder(item); }}
+                  onClick={(e) => { e.stopPropagation(); convertToPurchase(item); }}
                 >
                   📋
                 </button>
@@ -933,8 +937,8 @@ const HistoryPage = () => {
                 >
                   <option value="all">전체</option>
                   <option value="estimate">견적서</option>
-                  <option value="order">청구서</option>
-                  <option value="delivery_note">거래명세서</option>
+                  <option value="purchase">청구서</option>
+                  <option value="delivery">거래명세서</option>
                 </select>
               </div>
               

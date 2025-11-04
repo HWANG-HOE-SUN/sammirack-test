@@ -1,4 +1,4 @@
-// BOMDisplay.jsx 전체 수정 - 안전한 처리
+// BOMDisplay.jsx - 규격 표시 수정 (x 유지)
 
 import React, { useState, useEffect } from 'react';
 import { useProducts } from '../contexts/ProductContext';
@@ -11,10 +11,25 @@ import {
 } from '../utils/unifiedPriceManager';
 import AdminPriceEditor from './AdminPriceEditor';
 
-// 무게명칭 변환
+// ✅ 무게명칭 변환 + 규격 표시 수정
 function kgLabelFix(str) {
   if (!str) return '';
-  return String(str).replace(/200kg/g, '270kg').replace(/350kg/g, '450kg');
+  return String(str)
+    .replace(/200kg/g, '270kg')
+    .replace(/350kg/g, '450kg');
+}
+
+// ✅ 규격 표시용 함수 (x 유지)
+function formatSpecification(str) {
+  if (!str) return '-';
+  
+  // * → x 변환 (700*300 → 700x300)
+  let formatted = String(str).replace(/\*/g, 'x');
+  
+  // 무게 라벨 변환도 적용
+  formatted = kgLabelFix(formatted);
+  
+  return formatted;
 }
 
 export default function BOMDisplay({ bom, title, currentUser, selectedRackOption }) {
@@ -209,7 +224,7 @@ export default function BOMDisplay({ bom, title, currentUser, selectedRackOption
                       </div>
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                      {kgLabelFix(item.specification) || '-'}
+                      {formatSpecification(item.specification)}
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 'bold' }}>
                       {qty}개

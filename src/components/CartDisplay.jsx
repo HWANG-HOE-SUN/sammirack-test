@@ -17,12 +17,21 @@ export default function CartDisplay() {
       setRefreshKey(prev => prev + 1);
     };
 
+    // ✅ 추가: 추가옵션 가격 변경 이벤트 리스너
+    const handleExtraOptionsPriceChange = () => {
+      console.log('ProductContext: 추가옵션 가격 변경 감지, 가격 재계산 트리거');
+      setAdminPricesVersion(prev => prev + 1);
+    };
+
+
     window.addEventListener('adminPriceChanged', handlePriceChange);
     window.addEventListener('systemDataRestored', handleSystemRestore);
+    window.addEventListener('extraOptionsPriceChanged', handleExtraOptionsPriceChange); // ✅ 추가
     
     return () => {
       window.removeEventListener('adminPriceChanged', handlePriceChange);
       window.removeEventListener('systemDataRestored', handleSystemRestore);
+      window.removeEventListener('extraOptionsPriceChanged', handleExtraOptionsPriceChange); // ✅ 추가
     };
   }, []);
 

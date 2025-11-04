@@ -21,8 +21,22 @@ function kgLabelFix(str) {
   return String(str).replace(/200kg/g, '270kg').replace(/350kg/g, '450kg');
 }
 
+// ✅ 규격 표시용 함수 추가 (x 유지)
+function formatSpecification(str) {
+  if (!str) return '-';
+  
+  // * → x 변환 (700*300 → 700x300)
+  let formatted = String(str).replace(/\*/g, 'x');
+  
+  // 무게 라벨 변환도 적용
+  formatted = kgLabelFix(formatted);
+  
+  return formatted;
+}
+
 // ✅ 재고 감소 함수 수정 (export 필요)
-export const deductInventoryOnPrint = (cartItems, documentType = 'document', documentNumber = '') => {
+// ✅ 서버 기반 재고 감소 함수
+export const deductInventoryOnPrint = async (cartItems, documentType = 'document', documentNumber = '') => {
   if (!cartItems || !Array.isArray(cartItems)) {
     console.warn('재고 감소: 유효하지 않은 카트 데이터');
     return { success: false, message: '유효하지 않은 데이터' };
@@ -32,68 +46,120 @@ export const deductInventoryOnPrint = (cartItems, documentType = 'document', doc
   console.log('📦 카트 아이템:', cartItems);
   
   try {
-    // ✅ 수정: 올바른 로컬스토리지 키 사용
-    const stored = localStorage.getItem('inventory_data') || '{}';
-    const inventory = JSON.parse(stored);
+    // ✅ 1. 서버에서 최신 재고 데이터 가져오기
+    const { inventoryService } = await import('../services/InventoryService');
+    const serverInventory = await inventoryService.getInventory();
     
-    console.log('📦 현재 재고 상태:', inventory);
+    console.log('📦 서버 재고 데이터:', serverInventory);
+    console.log('📦 서버 재고 항목 수:', Object.keys(serverInventory).length);
     
     const deductedParts = [];
     const warnings = [];
+    const updates = {};
     
-    // 모든 카트 아이템의 BOM 부품들을 추출하여 재고 감소
+    // ✅ 2. 모든 카트 아이템의 BOM 처리
     cartItems.forEach((item, itemIndex) => {
-      console.log(`\n🔍 카트 아이템 ${itemIndex + 1}:`, item);
+      console.log(`\n🔍 카트 아이템 ${itemIndex + 1}:`, {
+        name: item.displayName || item.name,
+        quantity: item.quantity,
+        hasBOM: !!(item.bom && item.bom.length)
+      });
       
-      if (item.bom && Array.isArray(item.bom)) {
-        console.log(`  📦 BOM 항목 수: ${item.bom.length}`);
-        
-        item.bom.forEach((bomItem, bomIndex) => {
-          const partId = generatePartId(bomItem);
-          const requiredQty = Number(bomItem.quantity) || 0;
-          const currentStock = inventory[partId] || 0;
-          
-          console.log(`  - BOM ${bomIndex + 1}: ${bomItem.name}`);
-          console.log(`    partId: ${partId}`);
-          console.log(`    필요: ${requiredQty}, 현재재고: ${currentStock}`);
-          
-          if (requiredQty > 0) {
-            if (currentStock >= requiredQty) {
-              // 충분한 재고가 있는 경우 감소
-              inventory[partId] = currentStock - requiredQty;
-              deductedParts.push({
-                partId,
-                name: bomItem.name,
-                specification: bomItem.specification || '',
-                rackType: bomItem.rackType || '',
-                deducted: requiredQty,
-                remainingStock: inventory[partId]
-              });
-              console.log(`    ✅ 재고 감소 완료: ${currentStock} → ${inventory[partId]}`);
-            } else {
-              // 재고 부족 경고
-              warnings.push({
-                partId,
-                name: bomItem.name,
-                specification: bomItem.specification || '',
-                rackType: bomItem.rackType || '',
-                required: requiredQty,
-                available: currentStock,
-                shortage: requiredQty - currentStock
-              });
-              console.log(`    ⚠️ 재고 부족: 필요 ${requiredQty}, 가용 ${currentStock}`);
-            }
-          }
-        });
-      } else {
+      if (!item.bom || !Array.isArray(item.bom) || item.bom.length === 0) {
         console.log(`  ⚠️ BOM 데이터 없음`);
+        return;
       }
+      
+      console.log(`  📦 BOM 항목 수: ${item.bom.length}`);
+      console.log(`  📦 BOM 전체 데이터:`, JSON.stringify(item.bom, null, 2));
+      
+      item.bom.forEach((bomItem, bomIndex) => {
+        // ✅ 3. partId 생성 (generatePartId 사용)
+        const partId = generatePartId({
+          rackType: bomItem.rackType || '',
+          name: bomItem.name || '',
+          specification: bomItem.specification || ''
+        });
+        
+        const requiredQty = Number(bomItem.quantity) || 0;
+        const currentStock = Number(serverInventory[partId]) || 0;
+        
+        console.log(`\n  📌 BOM ${bomIndex + 1}: ${bomItem.name}`);
+        console.log(`    rackType: "${bomItem.rackType}"`);
+        console.log(`    name: "${bomItem.name}"`);
+        console.log(`    specification: "${bomItem.specification}"`);
+        console.log(`    🔑 생성된 partId: "${partId}"`);
+        console.log(`    📊 서버 재고: ${currentStock}개`);
+        console.log(`    📈 필요 수량: ${requiredQty}개`);
+        
+        // ✅ 4. 재고가 0인 경우 디버깅 정보 출력
+        if (currentStock === 0) {
+          console.log(`    ❌ 재고 0! 서버에 이 partId가 없음`);
+          console.log(`    🔍 서버에 있는 유사 부품명 검색...`);
+          
+          const cleanName = bomItem.name.replace(/[^\w가-힣]/g, '').toLowerCase();
+          const similarKeys = Object.keys(serverInventory).filter(key => {
+            const keyName = key.split('-')[1] || '';
+            return keyName.includes(cleanName) || cleanName.includes(keyName);
+          });
+          
+          if (similarKeys.length > 0) {
+            console.log(`    📋 서버에 있는 유사 키 (최대 5개):`);
+            similarKeys.slice(0, 5).forEach(k => {
+              console.log(`       - "${k}" (재고: ${serverInventory[k]}개)`);
+            });
+          } else {
+            console.log(`    📋 서버에 유사한 키도 없음`);
+          }
+        }
+        
+        if (requiredQty > 0) {
+          if (currentStock >= requiredQty) {
+            // ✅ 5. 충분한 재고 - 감소 예약
+            const newStock = currentStock - requiredQty;
+            updates[partId] = newStock;
+            
+            deductedParts.push({
+              partId,
+              name: bomItem.name,
+              specification: bomItem.specification || '',
+              rackType: bomItem.rackType || '',
+              deducted: requiredQty,
+              remainingStock: newStock
+            });
+            console.log(`    ✅ 재고 감소 예약: ${currentStock} → ${newStock}`);
+          } else {
+            // ✅ 6. 재고 부족 - 경고
+            warnings.push({
+              partId,
+              name: bomItem.name,
+              specification: bomItem.specification || '',
+              rackType: bomItem.rackType || '',
+              required: requiredQty,
+              available: currentStock,
+              shortage: requiredQty - currentStock
+            });
+            console.log(`    ⚠️ 재고 부족: 필요 ${requiredQty}, 가용 ${currentStock}`);
+          }
+        }
+      });
     });
     
-    // ✅ 수정: 올바른 로컬스토리지 키로 저장
-    localStorage.setItem('inventory_data', JSON.stringify(inventory));
+    // ✅ 7. 서버에 재고 업데이트
+    if (Object.keys(updates).length > 0) {
+      console.log('\n📤 서버에 재고 업데이트 전송:', updates);
+      await inventoryService.updateInventory(updates);
+      console.log('✅ 서버 재고 업데이트 완료');
+      
+      // ✅ 8. 로컬스토리지도 동기화 (보조용)
+      const localInventory = JSON.parse(localStorage.getItem('inventory_data') || '{}');
+      Object.entries(updates).forEach(([partId, newStock]) => {
+        localInventory[partId] = newStock;
+      });
+      localStorage.setItem('inventory_data', JSON.stringify(localInventory));
+    }
     
-    // 재고 업데이트 이벤트 발생
+    // ✅ 9. 이벤트 발생
     window.dispatchEvent(new CustomEvent('inventoryUpdated', {
       detail: {
         documentType,
@@ -104,9 +170,23 @@ export const deductInventoryOnPrint = (cartItems, documentType = 'document', doc
       }
     }));
     
-    console.log('\n📋 재고 감소 결과:');
+    console.log('\n📋 재고 감소 결과 요약:');
     console.log(`  ✅ 성공적으로 감소된 부품: ${deductedParts.length}개`);
     console.log(`  ⚠️  재고 부족 경고: ${warnings.length}개`);
+    
+    if (deductedParts.length > 0) {
+      console.log('\n  ✅ 감소된 부품 상세:');
+      deductedParts.forEach(p => {
+        console.log(`    - ${p.name} (${p.specification}): ${p.deducted}개 감소, 남은 재고: ${p.remainingStock}`);
+      });
+    }
+    
+    if (warnings.length > 0) {
+      console.log('\n  ⚠️  부족한 부품 상세:');
+      warnings.forEach(w => {
+        console.log(`    - ${w.name} (${w.specification}): 필요 ${w.required}, 가용 ${w.available}, 부족 ${w.shortage}`);
+      });
+    }
     
     return {
       success: true,
@@ -442,7 +522,7 @@ useEffect(() => {
 
   // 재고 수량 변경 (실시간 동기화)
   const handleInventoryChange = async (material, newQuantity) => {
-    const partId = material.partId || generatePartId(material);
+    const partId = generatePartId(material) || material.partId;
     const quantity = Math.max(0, Number(newQuantity) || 0);
     
     setSyncStatus('📤 저장 중...');
@@ -452,16 +532,17 @@ useEffect(() => {
         username: currentUser?.username || 'admin',
         role: currentUser?.role || 'admin'
       };
-
+  
       const success = await saveInventorySync(partId, quantity, userInfo);
       
       if (success) {
+        // ✅ 수정: 로컬 상태도 숫자 형식으로 저장
         setInventory(prev => ({
           ...prev,
-          [partId]: quantity
+          [partId]: quantity  // 객체가 아닌 순수 숫자값
         }));
         
-        setSyncStatus('✅ 전세계 동기화됨');
+        setSyncStatus('✅ 모든 PC 동기화됨');
         setLastSyncTime(new Date());
       } else {
         setSyncStatus('❌ 저장 실패');
@@ -542,7 +623,7 @@ useEffect(() => {
     // 사용 중인 재고만 보기
     if (showOnlyInUse) {
       result = result.filter(material => {
-        const partId = material.partId || generatePartId(material);
+        const partId = generatePartId(material) || material.partId;
         return (inventory[partId] || 0) > 0;
       });
     }
@@ -562,8 +643,8 @@ useEffect(() => {
             bValue = b.rackType || '';
             break;
           case 'quantity':
-            aValue = inventory[a.partId || generatePartId(a)] || 0;
-            bValue = inventory[b.partId || generatePartId(b)] || 0;
+            aValue = inventory[generatePartId(a) || a.partId] || 0;
+            bValue = inventory[generatePartId(b) || b.partId] || 0;
             break;
           case 'price':
             aValue = getEffectivePrice(a);
@@ -593,7 +674,7 @@ useEffect(() => {
   // 체크박스 처리
   const handleSelectAll = (checked) => {
     if (checked) {
-      const allIds = new Set(filteredMaterials.map(m => m.partId || generatePartId(m)));
+      const allIds = new Set(filteredMaterials.map(m => generatePartId(m) || m.partId));
       setSelectedItems(allIds);
     } else {
       setSelectedItems(new Set());
@@ -652,7 +733,7 @@ useEffect(() => {
   const exportInventory = () => {
     try {
       const inventoryData = filteredMaterials.map(material => {
-        const partId = material.partId || generatePartId(material);
+        const partId = generatePartId(material) || material.partId;
         const quantity = inventory[partId] || 0;
         const effectivePrice = getEffectivePrice(material);
         
@@ -689,7 +770,7 @@ useEffect(() => {
   // 재고 가치 계산
   const getTotalInventoryValue = () => {
     return filteredMaterials.reduce((total, material) => {
-      const partId = material.partId || generatePartId(material);
+      const partId = generatePartId(material) || material.partId;
       const quantity = inventory[partId] || 0;
       const effectivePrice = getEffectivePrice(material);
       return total + (quantity * effectivePrice);
@@ -699,7 +780,7 @@ useEffect(() => {
   // 부족한 재고 알림
   const getLowStockItems = () => {
     return filteredMaterials.filter(material => {
-      const partId = material.partId || generatePartId(material);
+      const partId = generatePartId(material) || material.partId;
       const quantity = inventory[partId] || 0;
       return quantity <= 5;
     });
@@ -710,14 +791,22 @@ useEffect(() => {
 
   // 재고 수량 가져오기
   const getInventoryQuantity = (material) => {
-    const partId = material.partId || generatePartId(material);
-    return inventory[partId] || 0;
+    const partId = generatePartId(material) || material.partId;
+    const stockData = inventory[partId];
+    
+    // ✅ 수정: 다양한 형식 대응
+    if (typeof stockData === 'number') {
+      return stockData;
+    } else if (typeof stockData === 'object' && stockData !== null) {
+      return Number(stockData.quantity) || 0;
+    }
+    return 0;
   };
 
   // 표시 가격 정보 가져오기
   const getDisplayPrice = (material) => {
     const effectivePrice = getEffectivePrice(material);
-    const hasAdminPrice = adminPrices[material.partId || generatePartId(material)]?.price > 0;
+    const hasAdminPrice = adminPrices[generatePartId(material) || material.partId]?.price > 0;
     
     return {
       price: effectivePrice,
@@ -884,7 +973,7 @@ useEffect(() => {
       </div>
 
       <div className="sync-info-banner">
-        🌐 재고 및 단가 변경사항은 전 세계 모든 PC에서 실시간으로 동기화됩니다.
+        🌐 재고 및 단가 변경사항은 모든 PC에서 실시간으로 동기화됩니다.
       </div>
 
       <div className="inventory-table-container">
@@ -934,7 +1023,7 @@ useEffect(() => {
             </thead>
             <tbody>
               {filteredMaterials.map((material, index) => {
-                const partId = material.partId || generatePartId(material);
+                const partId = generatePartId(material) || material.partId;
                 const quantity = getInventoryQuantity(material);
                 const { price, isModified } = getDisplayPrice(material);
                 const totalValue = quantity * price;
@@ -961,7 +1050,7 @@ useEffect(() => {
                         )}
                       </div>
                     </td>
-                    <td>{material.specification || '-'}</td>
+                    <td>{formatSpecification(material.specification)}</td>
                     <td>
                       <span className="rack-type">{material.rackType}</span>
                     </td>
