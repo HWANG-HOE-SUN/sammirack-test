@@ -8,6 +8,7 @@
 const INVENTORY_KEY = 'inventory_data';
 const ADMIN_PRICES_KEY = 'admin_edit_prices';
 const PRICE_HISTORY_KEY = 'admin_price_history';
+const PENDING_HISTORY_KEY = 'pending_price_history'; // 오프라인 큐용
 const ACTIVITY_LOG_KEY = 'admin_activity_log';
 import { generatePartId } from './unifiedPriceManager';
 
@@ -82,6 +83,7 @@ class RealtimeAdminSync {
     window.addEventListener('online', () => {
       this.isOnline = true;
       console.log('📶 네트워크 연결됨 - 동기화 재시작');
+      this.syncPendingHistory(); // 네트워크 복구 시 큐 동기화
     });
 
     window.addEventListener('offline', () => {
@@ -151,8 +153,12 @@ class RealtimeAdminSync {
     }, 10000);
   }
 
-  // ✅ 실제 저장 실행 (Exponential Backoff 강화)
-  async executeSave() {
+	  // ✅ 실제 저장 실행 (Exponential Backoff 강화)
+	  async executeSave() {
+	    // 오프라인 큐에 쌓인 이력 먼저 동기화 시도
+	    await this.syncPendingHistory();
+	    
+	    // ... (기존 로직 계속)
     console.log('🔄 서버 저장 실행');
     this.lastSaveTime = Date.now();
 
@@ -211,8 +217,12 @@ class RealtimeAdminSync {
     return false;
   }
 
-  // GitHub Gist에서 데이터 로드
-  async loadFromServer() {
+	  // GitHub Gist에서 데이터 로드
+	  async loadFromServer() {
+	    // 로드 전 오프라인 큐 동기화 시도 (네트워크 연결 시)
+	    await this.syncPendingHistory();
+	    
+	    // ... (기존 로직 계속)
     if (!this.GIST_ID || !this.GITHUB_TOKEN) {
       console.error('❌ GitHub 설정이 누락되었습니다.');
       console.error('   GIST_ID:', this.GIST_ID ? '설정됨' : '없음');
@@ -313,10 +323,11 @@ class RealtimeAdminSync {
           }
         }
   
-        if (gist.files['price_history.json']) {
-          const historyData = JSON.parse(gist.files['price_history.json'].content);
-          localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(historyData));
-        }
+	        if (gist.files['price_history.json']) {
+	          // price_history.json은 Append-only 로그이므로, 서버의 최신 버전을 로컬에 저장
+	          const historyData = JSON.parse(gist.files['price_history.json'].content);
+	          localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(historyData));
+	        }
   
         if (gist.files['activity_log.json']) {
           const activityData = JSON.parse(gist.files['activity_log.json'].content);
@@ -334,71 +345,163 @@ class RealtimeAdminSync {
     }
   }
 
-  // GitHub Gist에 데이터 저장
-  async saveToServer() {
-    if (!this.GIST_ID || !this.GITHUB_TOKEN) {
-      console.error('❌ GitHub 설정이 누락되었습니다.');
-      return false;
-    }
-
-    try {
-      const inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || '{}');
-      const adminPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
-      const priceHistory = JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '{}');
-      const activityLog = JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]');
-
-      const userIP = await this.getUserIP();
-      
-      activityLog.unshift({
-        timestamp: new Date().toISOString(),
-        action: 'data_sync',
-        userIP,
-        dataTypes: ['inventory', 'prices', 'history']
-      });
-
-      if (activityLog.length > 1000) {
-        activityLog.splice(1000);
-      }
-
-      const files = {
-        'inventory.json': {
-          content: JSON.stringify(inventory, null, 2)
-        },
-        'admin_prices.json': {
-          content: JSON.stringify(adminPrices, null, 2)
-        },
-        'price_history.json': {
-          content: JSON.stringify(priceHistory, null, 2)
-        },
-        'activity_log.json': {
-          content: JSON.stringify(activityLog, null, 2)
-        },
-        'last_updated.txt': {
-          content: `Last updated: ${new Date().toISOString()}\nUser IP: ${userIP}\nSync ID: ${this.getInstanceId()}`
-        }
-      };
-
-      const response = await fetch(`${this.API_BASE}/${this.GIST_ID}`, {
-        method: 'PATCH',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ files })
-      });
-
-      if (!response.ok) {
-        throw new Error(`GitHub API 저장 실패: ${response.status} - ${response.statusText}`);
-      }
-
-      console.log('✅ GitHub 서버에 데이터 저장 완료');
-      
-      localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(activityLog));
-      
-      return true;
-      
-    } catch (error) {
-      console.error('❌ GitHub 서버 저장 실패:', error);
-      throw error;
-    }
-  }
+	  // GitHub Gist에 데이터 저장
+	  async saveToServer() {
+	    if (!this.GIST_ID || !this.GITHUB_TOKEN) {
+	      console.error('❌ GitHub 설정이 누락되었습니다.');
+	      return false;
+	    }
+	
+	    try {
+	      const inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || '{}');
+	      const adminPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
+	      // priceHistory는 appendPriceHistory를 통해 Gist에 직접 반영되므로, 여기서는 로컬의 최신 상태만 읽습니다.
+	      const priceHistory = JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '[]');
+	      const activityLog = JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]');
+	
+	      const userIP = await this.getUserIP();
+	      
+	      activityLog.unshift({
+	        timestamp: new Date().toISOString(),
+	        action: 'data_sync',
+	        userIP,
+	        dataTypes: ['inventory', 'prices', 'history']
+	      });
+	
+	      if (activityLog.length > 1000) {
+	        activityLog.splice(1000);
+	      }
+	
+	      const files = {
+	        'inventory.json': {
+	          content: JSON.stringify(inventory, null, 2)
+	        },
+	        'admin_prices.json': {
+	          content: JSON.stringify(adminPrices, null, 2)
+	        },
+	        // price_history.json은 appendPriceHistory에서 별도로 처리하므로, 여기서는 업데이트하지 않습니다.
+	        // 'price_history.json': {
+	        //   content: JSON.stringify(priceHistory, null, 2)
+	        // },
+	        'activity_log.json': {
+	          content: JSON.stringify(activityLog, null, 2)
+	        },
+	        'last_updated.txt': {
+	          content: `Last updated: ${new Date().toISOString()}\nUser IP: ${userIP}\nSync ID: ${this.getInstanceId()}`
+	        }
+	      };
+	
+	      const response = await fetch(`${this.API_BASE}/${this.GIST_ID}`, {
+	        method: 'PATCH',
+	        headers: this.getHeaders(),
+	        body: JSON.stringify({ files })
+	      });
+	
+	      if (!response.ok) {
+	        throw new Error(`GitHub API 저장 실패: ${response.status} - ${response.statusText}`);
+	      }
+	
+	      console.log('✅ GitHub 서버에 데이터 저장 완료');
+	      
+	      localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(activityLog));
+	      
+	      return true;
+	      
+	    } catch (error) {
+	      console.error('❌ GitHub 서버 저장 실패:', error);
+	      throw error;
+	    }
+	  }
+	
+	  // =================================================================
+	  // ✅ Gist Append-only 가격 이력 관리 (Phase 4)
+	  // =================================================================
+	
+	  /**
+	   * 오프라인 큐에 쌓인 가격 이력을 서버에 동기화합니다.
+	   */
+	  async syncPendingHistory() {
+	    if (!this.isOnline) return;
+	    
+	    const pendingRecords = JSON.parse(localStorage.getItem(PENDING_HISTORY_KEY) || '[]');
+	    if (pendingRecords.length === 0) return;
+	    
+	    console.log(`🔄 오프라인 가격 이력 ${pendingRecords.length}건 동기화 시도...`);
+	    
+	    // Gist의 최신 price_history.json을 가져옵니다.
+	    try {
+	      const gistResponse = await fetch(`${this.API_BASE}/${this.GIST_ID}`, {
+	        headers: this.getHeaders()
+	      });
+	      
+	      if (!gistResponse.ok) throw new Error(\`Gist 로드 실패: \${gistResponse.status}\`);
+	      
+	      const gist = await gistResponse.json();
+	      const currentHistoryFile = gist.files['price_history.json'];
+	      
+	      if (!currentHistoryFile) {
+	        console.warn('⚠️ price_history.json 파일이 Gist에 없습니다. 새로 생성합니다.');
+	      }
+	      
+	      const currentHistory = currentHistoryFile 
+	        ? JSON.parse(currentHistoryFile.content) 
+	        : [];
+	      
+	      // 로컬 큐의 레코드를 서버 데이터에 추가 (Append-only)
+	      const newHistory = [...currentHistory, ...pendingRecords];
+	      
+	      // Gist에 업데이트
+	      const updateResponse = await fetch(\`${this.API_BASE}/\${this.GIST_ID}\`, {
+	        method: 'PATCH',
+	        headers: this.getHeaders(),
+	        body: JSON.stringify({
+	          files: {
+	            'price_history.json': {
+	              content: JSON.stringify(newHistory, null, 2)
+	            }
+	          }
+	        })
+	      });
+	      
+	      if (!updateResponse.ok) {
+	        throw new Error(\`Gist 업데이트 실패: \${updateResponse.status}\`);
+	      }
+	      
+	      // 성공 시 로컬 큐 비우기 및 로컬 히스토리 업데이트
+	      localStorage.removeItem(PENDING_HISTORY_KEY);
+	      localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(newHistory));
+	      console.log('✅ 오프라인 가격 이력 동기화 완료');
+	      
+	    } catch (error) {
+	      console.error('❌ 오프라인 가격 이력 동기화 실패:', error);
+	      // 실패 시 큐는 유지됩니다.
+	    }
+	  }
+	
+	  /**
+	   * 가격 변경 이력을 기록하고 Gist에 동기화 시도합니다.
+	   * @param {object} record - 가격 이력 레코드 (스키마 준수)
+	   */
+	  async appendPriceHistory(record) {
+	    // 1. 로컬 히스토리에 추가
+	    const currentHistory = JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '[]');
+	    currentHistory.push(record);
+	    localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(currentHistory));
+	    
+	    // 2. 오프라인 큐에 추가
+	    const pendingRecords = JSON.parse(localStorage.getItem(PENDING_HISTORY_KEY) || '[]');
+	    pendingRecords.push(record);
+	    localStorage.setItem(PENDING_HISTORY_KEY, JSON.stringify(pendingRecords));
+	    
+	    // 3. 즉시 동기화 시도 (네트워크 연결 시)
+	    if (this.isOnline) {
+	      await this.syncPendingHistory();
+	    } else {
+	      console.log('📵 오프라인 모드: 가격 이력을 큐에 저장했습니다.');
+	    }
+	  }
+	  
+	  // ... (기존 로직 계속)
 
   // 브로드캐스트 업데이트
   broadcastUpdate(type, data) {
@@ -466,15 +569,42 @@ export const saveInventorySync = async (partId, quantity, userInfo = {}) => {
   }
 };
 
-export const loadInventory = () => {
-  try {
-    const stored = localStorage.getItem(INVENTORY_KEY) || '{}';
-    return JSON.parse(stored);
-  } catch (error) {
-    console.error('재고 로드 실패:', error);
-    return {};
-  }
-};
+	export const loadInventory = () => {
+	  try {
+	    const stored = localStorage.getItem(INVENTORY_KEY) || '{}';
+	    return JSON.parse(stored);
+	  } catch (error) {
+	    console.error('재고 로드 실패:', error);
+	    return {};
+	  }
+	};
+	
+	/**
+	 * Gist에 기록된 가격 이력 전체를 로드합니다.
+	 * @returns {Array} 가격 이력 레코드 배열
+	 */
+	export const loadPriceHistory = () => {
+	  try {
+	    const stored = localStorage.getItem(PRICE_HISTORY_KEY) || '[]';
+	    return JSON.parse(stored);
+	  } catch (error) {
+	    console.error('가격 이력 로드 실패:', error);
+	    return [];
+	  }
+	};
+	
+	/**
+	 * 가격 이력 레코드를 Gist에 추가합니다.
+	 * unifiedPriceManager의 savePriceHistory를 대체합니다.
+	 * @param {object} record - 가격 이력 레코드 (스키마 준수)
+	 */
+	export const appendPriceHistory = async (record) => {
+	  if (syncInstance) {
+	    await syncInstance.appendPriceHistory(record);
+	  } else {
+	    console.error('❌ RealtimeAdminSync 인스턴스가 초기화되지 않았습니다.');
+	  }
+	};
 
 export const forceServerSync = async () => {
   if (syncInstance) {
@@ -493,37 +623,56 @@ export const loadAdminPrices = () => {
   }
 };
 
-export const saveAdminPriceSync = async (partId, price, partInfo = {}, userInfo = {}) => {
-  try {
-    const adminPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
-    
-    if (price && price > 0) {
-      adminPrices[partId] = {
-        price: Number(price),
-        timestamp: new Date().toISOString(),
-        account: userInfo.username || 'admin',
-        partInfo
-      };
-    } else {
-      delete adminPrices[partId];
-    }
-
-    localStorage.setItem(ADMIN_PRICES_KEY, JSON.stringify(adminPrices));
-
-    if (syncInstance) {
-      syncInstance.broadcastUpdate('prices-updated', adminPrices);
-    }
-
-    if (syncInstance) {
-      syncInstance.debouncedSave();
-    }
-
-    return true;
-  } catch (error) {
-    console.error('관리자 단가 저장 실패:', error);
-    return false;
-  }
-};
+	export const saveAdminPriceSync = async (partId, price, partInfo = {}, userInfo = {}) => {
+	  try {
+	    const adminPrices = JSON.parse(localStorage.getItem(ADMIN_PRICES_KEY) || '{}');
+	    
+	    const oldPrice = adminPrices[partId]?.price || 0;
+	    const newPrice = Number(price);
+	    
+	    if (newPrice > 0) {
+	      adminPrices[partId] = {
+	        price: newPrice,
+	        timestamp: new Date().toISOString(),
+	        account: userInfo.username || 'admin',
+	        partInfo
+	      };
+	    } else {
+	      delete adminPrices[partId];
+	    }
+	
+	    localStorage.setItem(ADMIN_PRICES_KEY, JSON.stringify(adminPrices));
+	
+	    // ✅ 가격 이력 기록 (변경이 있을 경우에만)
+	    if (oldPrice !== newPrice && syncInstance) {
+	      const record = {
+	        ts: new Date().toISOString(),
+	        admin: { 
+	          deviceId: syncInstance.getInstanceId(), 
+	          userHint: userInfo.username || 'admin' 
+	        },
+	        partId: partId,
+	        context: partInfo, // partInfo를 context로 사용
+	        from: oldPrice,
+	        to: newPrice,
+	        reason: 'manual edit', // saveAdminPriceSync는 수동 편집으로 간주
+	        priceKey: partInfo.priceKey || partId, // 하이랙의 경우 priceKey를 사용
+	        source: 'ui'
+	      };
+	      syncInstance.appendPriceHistory(record);
+	    }
+	
+	    if (syncInstance) {
+	      syncInstance.broadcastUpdate('prices-updated', adminPrices);
+	      syncInstance.debouncedSave(); // admin_prices.json 업데이트
+	    }
+	
+	    return true;
+	  } catch (error) {
+	    console.error('관리자 단가 저장 실패:', error);
+	    return false;
+	  }
+	};
 
 if (typeof window !== 'undefined') {
   initRealtimeSync();
