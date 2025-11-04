@@ -14,7 +14,8 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.23.1",
     "xlsx": "^0.18.5",
-    "exceljs": "^4.3.0"
+    "exceljs": "^4.3.0",
+    "axios": "^1.6.8"
   },
   "devDependencies": {
     "@tailwindcss/aspect-ratio": "^0.4.2", 
