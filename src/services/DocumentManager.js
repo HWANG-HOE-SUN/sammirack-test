@@ -14,10 +14,12 @@ export class DocumentManager {
 
   /**
    * Create a new estimate document
-   * @param {Object} data - Estimate data
+   * @param {Object} data - Estimate data (must include priceSnapshot)
    * @returns {EstimateDocument} Created estimate document
    */
   createEstimate(data) {
+    // data.components의 unitPrice는 이미 고정된 가격입니다.
+    // data.priceSnapshot은 ProductContext에서 계산되어 넘어옵니다.
     const estimateDoc = new EstimateDocument(data);
     this.saveDocument(estimateDoc);
     return estimateDoc;
