@@ -71,7 +71,9 @@ function App() {
             <Route path="/inventory" element={<InventoryPage currentUser={currentUser} />} />
           )}
           <Route path="/estimate/new" element={<EstimateForm />} />
+          <Route path="/estimate/edit/:id" element={<EstimateForm />} />
           <Route path="/purchase-order/new" element={<PurchaseOrderForm />} />
+          <Route path="/purchase-order/edit/:id" element={<PurchaseOrderForm />} />
           <Route path="/delivery-note/new" element={<DeliveryNoteForm />} />
           <Route path="/delivery-note/edit/:id" element={<DeliveryNoteForm />} />
           <Route path="/history" element={<HistoryPage />} />
