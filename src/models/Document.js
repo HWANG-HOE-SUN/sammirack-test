@@ -21,6 +21,8 @@ export class Document {
     this.products = data.products || [];
     this.components = data.components || [];
     this.notes = data.notes || '';
+    // ✅ 문서 생성 시점의 가격 스냅샷 (partId: price)
+    this.priceSnapshot = data.priceSnapshot || {};
   }
 
   /**
@@ -65,6 +67,7 @@ export class Document {
       products: this.products,
       components: this.components,
       notes: this.notes,
+      priceSnapshot: this.priceSnapshot,
     };
   }
 }
