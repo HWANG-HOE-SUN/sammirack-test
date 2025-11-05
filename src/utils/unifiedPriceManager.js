@@ -165,23 +165,6 @@ export const saveExtraOptionsPrice = (optionId, price) => {
 
 // Gist 연동을 위해 realtimeAdminSync에서 saveAdminPriceSync를 가져옵니다.
 import { saveAdminPriceSync } from './realtimeAdminSync';
-
-// 관리자 단가 저장 (기존 시그니처 보존)
-export const saveAdminPrice = async (partId, price, partInfo = {}) => {
-  // saveAdminPriceSync는 partInfo에 priceKey 등을 포함하여 호출되어야 합니다.
-  // partInfo에 partId가 하이랙이 아닌 경우 priceKey를 partId로 설정합니다.
-  if (partInfo.rackType !== '하이랙') {
-    partInfo.priceKey = partId;
-  }
-  
-  // unifiedPriceManager의 saveAdminPrice는 이제 realtimeAdminSync의 saveAdminPriceSync를 호출합니다.
-  // partInfo에 필요한 모든 컨텍스트 정보가 포함되어야 합니다.
-  // partInfo에 partId가 하이랙이 아닌 경우 priceKey를 partId로 설정합니다.
-  return await saveAdminPriceSync(partId, price, partInfo);
-};
-
-// Gist 연동을 위해 realtimeAdminSync에서 saveAdminPriceSync를 가져옵니다.
-import { saveAdminPriceSync } from './realtimeAdminSync';
 // 정본 partId 관리를 위해 canonicalPartIdManager를 가져옵니다.
 import { getCanonicalPartId, isDeprecatedPartId } from './canonicalPartIdManager';
 
@@ -435,9 +418,6 @@ export const loadAllMaterials = async () => {
     return [];
   }
 };
-
-// Gist 연동을 위해 realtimeAdminSync에서 loadPriceHistory를 가져옵니다.
-import { loadPriceHistory } from './realtimeAdminSync';
 
 // =================================================================
 // 단가 히스토리 (Gist 연동)
