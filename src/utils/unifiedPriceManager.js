@@ -62,37 +62,6 @@ export const generatePartId = (item) => {
   }
 };
 
-// ✅ 재고 관리용 partID 생성 함수 (색상 포함)
-// NOTE: 하이랙의 경우, generateInventoryPartId는 stockKey와 동일한 역할을 수행합니다.
-// 그러나 기존 시그니처 보존을 위해 별도의 유틸리티 함수를 추가합니다.
-export const generateInventoryPartId = (item) => {
-  if (!item) {
-    console.warn('generateInventoryPartId: item이 undefined입니다');
-    return 'unknown-part-inv';
-  }
-  
-  const { rackType = '', name = '', specification = '' } = item;
-  
-  // 부품명 처리 (색상은 유지!)
-  let cleanName = String(name)
-    .replace(/[()]/g, '')  // 괄호 제거
-    .replace(/\s+/g, '')   // 공백 제거
-    .replace(/\*/g, 'x');  // * → x 변환
-  
-  // 소문자 변환
-  cleanName = cleanName.toLowerCase();
-  
-  // 규격 처리
-  if (specification && String(specification).trim()) {
-    const cleanSpec = String(specification)
-      .replace(/\s+/g, '')
-      .toLowerCase();
-    return `${rackType}-${cleanName}-${cleanSpec}`;
-  } else {
-    return `${rackType}-${cleanName}-`;
-  }
-};
-
 // =================================================================
 // 하이랙 전용: 단가-재고 키 분리 유틸리티 (Phase 3)
 // =================================================================
