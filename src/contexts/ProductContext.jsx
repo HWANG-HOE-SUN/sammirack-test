@@ -9,6 +9,7 @@ import {
   loadExtraOptionsPrices  // ✅ 추가
 } from '../utils/unifiedPriceManager';
 import { inventoryService } from '../services/InventoryService';
+import { getPartId } from '../utils/nameMap';
 
 const ProductContext = createContext();
 
@@ -106,8 +107,8 @@ const applyAdminEditPrice = (item) => {
   try {
     const stored = localStorage.getItem('admin_edit_prices') || '{}';
     const priceData = JSON.parse(stored);
-    // 수정: item에 partId가 있으면 사용, 없으면 생성
-    const partId = item.partId || generatePartId(item); // ✅ 수정
+    // 수정: item에 partId를 통일된 양식으로 우선 생송시도 없으면 이전 partid
+    const partId = generatePartId(item) || item.partId ; // ✅ 수정
     // const partId = generatePartId(item); // ✅ import한 함수 사용
     const adminPrice = priceData[partId];
     
@@ -165,7 +166,8 @@ const ensureSpecification=(row,ctx={})=>{
     else if(/^선반$/.test(nm)){
       const {w,d}=parseWD(size||"");
       if(row.rackType==="경량랙"||row.rackType==="중량랙"){
-        row.specification=w&&d?`${w}${d}`:"";
+        // 수정: 사용자가 원하는 "W900xD900" 형태를 유지하도록 수정
+        row.specification=w&&d?`W${w}xD${d}`:"";
       } else {
         row.specification=`사이즈 ${size||""}${weightOnly?` ${weightOnly}`:""}`;
       }
@@ -1039,7 +1041,11 @@ export const ProductProvider=({children})=>{
       if (item.bom && Array.isArray(item.bom)) {
         item.bom.forEach(bomItem => {
           // ✅ specification을 포함한 고유 키 생성
-          const key = `${bomItem.rackType}|${bomItem.size || ''}|${bomItem.name}|${bomItem.specification || ''}`;
+          const key = getPartId({
+            rackType: bomItem.rackType,
+            name: bomItem.name,
+            specification: bomItem.specification
+          });
           
           if (bomMap.has(key)) {
             const existing = bomMap.get(key);
