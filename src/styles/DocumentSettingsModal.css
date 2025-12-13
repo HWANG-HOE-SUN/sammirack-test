@@ -1,0 +1,166 @@
+/* 문서 양식 설정 모달 */
+.settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.settings-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.settings-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.settings-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #212529;
+}
+
+.settings-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.settings-modal-close:hover {
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+.settings-modal-body {
+  padding: 24px;
+}
+
+.settings-info {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #856404;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-field label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #495057;
+}
+
+.settings-field input {
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.settings-field input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.settings-modal-footer {
+  padding: 20px 24px;
+  border-top: 2px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-btn-reset,
+.settings-btn-cancel,
+.settings-btn-save {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-btn-reset {
+  background-color: #6c757d;
+  color: white;
+}
+
+.settings-btn-reset:hover {
+  background-color: #5a6268;
+}
+
+.settings-btn-cancel {
+  background-color: #f8f9fa;
+  color: #495057;
+  border: 1px solid #dee2e6;
+}
+
+.settings-btn-cancel:hover {
+  background-color: #e9ecef;
+}
+
+.settings-btn-save {
+  background-color: #28a745;
+  color: white;
+}
+
+.settings-btn-save:hover {
+  background-color: #218838;
+}
+
+/* 인쇄 시 숨김 */
+@media print {
+  .settings-modal-overlay {
+    display: none !important;
+  }
+}
