@@ -490,7 +490,9 @@ ${item.type === 'estimate' ? item.estimateNumber : item.type === 'purchase' ? it
           quantity: qty,
           price: totalPrice,
           unit: itemData.unit || '개',
-          bom: bom
+          bom: bom,
+          // ✅ 저장된 문서에서 extraOptions 복원 (item.cart에서 가져옴)
+          extraOptions: [] // 기본값 (item.cart에서 복원)
         });
       } else {
         // 직접 추가 품목 -> customItems에 보관
@@ -519,9 +521,20 @@ ${item.type === 'estimate' ? item.estimateNumber : item.type === 'purchase' ? it
     console.log('📦 Custom Items:', customItems.length, '개');
     console.log('🔧 Custom Materials:', customMaterials.length, '개');
     
+    // ✅ 저장된 문서에서 cart 복원 (extraOptions 포함)
+    // item.cart가 있으면 그대로 사용, 없으면 위에서 생성한 cart 사용
+    let finalCart = cart;
+    if (item.cart && Array.isArray(item.cart) && item.cart.length > 0) {
+      // 저장된 cart 사용 (extraOptions 포함)
+      finalCart = item.cart;
+      console.log('✅ 저장된 cart 사용 (extraOptions 포함):', finalCart.length, '개');
+    } else {
+      console.log('⚠️ 저장된 cart 없음 - 재생성한 cart 사용:', finalCart.length, '개');
+    }
+    
     // 홈 화면으로 이동 (타입별로 다른 route)
     const editingData = {
-      cart,
+      cart: finalCart, // ✅ 저장된 cart 또는 재생성한 cart 사용
       customItems,
       customMaterials,
       editingDocumentId: item.id,

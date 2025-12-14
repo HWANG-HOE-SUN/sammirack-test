@@ -102,7 +102,7 @@ const HomePage = ({ currentUser }) => {
   const navigate = useNavigate();  // ✅ 추가
   const { 
     currentPrice, currentBOM, addToCart, cart, cartBOM, cartBOMView, 
-    selectedType, selectedOptions, setCart  // ✅ setCart 추가
+    selectedType, selectedOptions, setCart, handleExtraOptionChange  // ✅ handleExtraOptionChange 추가
   } = useProducts();
   const [showCurrentBOM, setShowCurrentBOM] = useState(true);
   const [showTotalBOM, setShowTotalBOM] = useState(true);
@@ -112,12 +112,25 @@ const HomePage = ({ currentUser }) => {
   const editingData = location.state || {};
   const isEditMode = !!editingData.editingDocumentId;
   
-  // ✅ 편집 모드 시 cart 초기화
+  // ✅ 편집 모드 시 cart 및 extraOptions 초기화
   useEffect(() => {
     if (isEditMode && editingData.cart) {
       setCart(editingData.cart);
+      
+      // ✅ cart에서 extraOptions 추출하여 복원
+      const allExtraOptions = [];
+      editingData.cart.forEach(item => {
+        if (item.extraOptions && Array.isArray(item.extraOptions)) {
+          allExtraOptions.push(...item.extraOptions);
+        }
+      });
+      if (allExtraOptions.length > 0) {
+        const uniqueExtraOptions = Array.from(new Set(allExtraOptions));
+        handleExtraOptionChange(uniqueExtraOptions);
+        console.log('✅ extraOptions 복원:', uniqueExtraOptions);
+      }
     }
-  }, [isEditMode, editingData.cart, setCart]);
+  }, [isEditMode, editingData.cart, setCart, handleExtraOptionChange]);
 
   const getFinalPrice = () => {
     if (!currentBOM || currentBOM.length === 0) {

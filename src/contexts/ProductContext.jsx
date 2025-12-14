@@ -1120,6 +1120,7 @@ const makeExtraOptionBOM = () => {
           
           // ✅ 4. 매핑 테이블 확인 (재고관리용)
           const mappedInventoryPartIds = mapExtraToBaseInventoryPart(extraOptionId);
+          console.log(`  🔍 매핑 테이블 확인 결과: "${extraOptionId}" → "${mappedInventoryPartIds}" (타입: ${Array.isArray(mappedInventoryPartIds) ? '배열' : typeof mappedInventoryPartIds})`);
           
           if (Array.isArray(mappedInventoryPartIds)) {
             // ✅ 병합 옵션 - 각각 추가
@@ -1398,13 +1399,17 @@ const makeExtraOptionBOM = () => {
             // ⚠️ 중요: 하이랙의 경우 colorWeight가 올바르게 설정되어 있어야 함
             // generateInventoryPartId는 colorWeight를 받아서 "기둥메트그레이(볼트식)270kg" 형식으로 생성
             // 예: name="기둥", colorWeight="메트그레이(볼트식)270kg" → "기둥메트그레이(볼트식)270kg"
-            if (selectedType === '하이랙' && !finalColorWeight) {
-              // colorWeight가 없으면 카테고리명과 이름에서 추출
-              if (color) {
-                finalColorWeight = weight ? `${color}${weight}` : color;
-                console.log(`  ✅ colorWeight 추출: "${finalColorWeight}"`);
-              } else {
-                console.log(`  ⚠️ 경고: 하이랙인데 colorWeight를 추출하지 못했습니다.`);
+            if (selectedType === '하이랙') {
+              // ⚠️ 중요: colorWeight가 없으면 카테고리명과 이름에서 다시 추출
+              if (!finalColorWeight) {
+                const reExtractedColor = extractColorFromName(opt.name, categoryName);
+                const reExtractedWeight = extractWeightFromCategory(categoryName);
+                if (reExtractedColor) {
+                  finalColorWeight = reExtractedWeight ? `${reExtractedColor}${reExtractedWeight}` : reExtractedColor;
+                  console.log(`  ✅ colorWeight 재추출: "${finalColorWeight}"`);
+                } else {
+                  console.log(`  ⚠️ 경고: 하이랙인데 colorWeight를 추출하지 못했습니다.`);
+                }
               }
             }
             
