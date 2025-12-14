@@ -116,6 +116,12 @@ const EstimateForm = () => {
             console.log(`✅ materials 자동 생성 완료: ${data.materials.length}개`);
           }
           
+          // ✅ 저장된 cart에서 extraOptions 복원
+          if (data.cart && Array.isArray(data.cart)) {
+            console.log('✅ 저장된 cart에서 extraOptions 복원:', data.cart);
+            // cart는 나중에 사용할 수 있도록 보관 (필요시)
+          }
+          
           setFormData({
             ...data,
             documentSettings: data.documentSettings || null
@@ -273,6 +279,12 @@ const EstimateForm = () => {
       // stampImage는 제외 (항상 PROVIDER 고정)
     };
     
+    // ✅ cart에서 extraOptions 추출 (문서 저장 시 포함)
+    const cartWithExtraOptions = cart.map(item => ({
+      ...item,
+      extraOptions: item.extraOptions || []
+    }));
+    
     const newEstimate = {
       ...formData,
       id: itemId,
@@ -289,6 +301,8 @@ const EstimateForm = () => {
       documentSettings: (existingDoc || isEditMode || editingDocumentId) 
         ? (formData.documentSettings || documentSettings)
         : documentSettings,
+      // ✅ extraOptions 저장 (문서 로드 시 복원용)
+      cart: cartWithExtraOptions,
       ...(existingDoc || isEditMode || editingDocumentId ? {} : { createdAt: new Date().toISOString() })
     };
   

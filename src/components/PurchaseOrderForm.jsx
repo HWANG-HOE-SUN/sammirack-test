@@ -370,6 +370,13 @@ const PurchaseOrderForm = () => {
     }
     
     const storageKey = `purchase_${itemId}`;
+    
+    // ✅ cart에서 extraOptions 추출 (문서 저장 시 포함)
+    const cartWithExtraOptions = cart.map(item => ({
+      ...item,
+      extraOptions: item.extraOptions || []
+    }));
+    
     const newOrder = {
       ...formData,
       id: itemId,
@@ -386,6 +393,8 @@ const PurchaseOrderForm = () => {
       unitPrice: formData.items[0] ? (parseInt(formData.items[0].unitPrice) || 0) : 0,
       totalPrice: formData.totalAmount,
       updatedAt: new Date().toISOString(),
+      // ✅ extraOptions 저장 (문서 로드 시 복원용)
+      cart: cartWithExtraOptions,
       ...(isEditMode ? {} : { createdAt: new Date().toISOString() })
     };
     
