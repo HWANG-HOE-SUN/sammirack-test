@@ -28,3 +28,8 @@ Thumbs.db
 node_modules/
 dist/
 .env
+.txt
+.md 
+
+# 서버 파일 
+/sammirack-gist-server-data
