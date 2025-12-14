@@ -74,19 +74,28 @@ export const deductInventoryOnPrint = async (cartItems, documentType = 'document
       console.log(`  📦 BOM 항목 수: ${item.bom.length}`);
       
       item.bom.forEach((bomItem, bomIndex) => {
-        // ✅ 재고용 Part ID 사용 (색상 포함)
-        const inventoryPartId = generateInventoryPartId({
-          rackType: bomItem.rackType || '',
-          name: bomItem.name || '',
-          specification: bomItem.specification || '',
-          colorWeight: bomItem.colorWeight || ''
-        });
+        // ✅ Phase 3: 하이랙의 경우 inventoryPartId 우선 사용
+        let inventoryPartId;
+        if (bomItem.inventoryPartId) {
+          // BOM에 inventoryPartId가 있으면 우선 사용 (하이랙 등)
+          inventoryPartId = bomItem.inventoryPartId;
+          console.log(`\n  📌 BOM ${bomIndex + 1}: ${bomItem.name}`);
+          console.log(`    🔑 BOM에서 inventoryPartId 사용: "${inventoryPartId}"`);
+        } else {
+          // 기존 로직 (하위 호환성)
+          inventoryPartId = generateInventoryPartId({
+            rackType: bomItem.rackType || '',
+            name: bomItem.name || '',
+            specification: bomItem.specification || '',
+            colorWeight: bomItem.colorWeight || ''
+          });
+          console.log(`\n  📌 BOM ${bomIndex + 1}: ${bomItem.name}`);
+          console.log(`    🔑 generateInventoryPartId로 생성: "${inventoryPartId}"`);
+        }
         
         const requiredQty = Number(bomItem.quantity) || 0;
         const currentStock = Number(serverInventory[inventoryPartId]) || 0;
         
-        console.log(`\n  📌 BOM ${bomIndex + 1}: ${bomItem.name}`);
-        console.log(`    🔑 inventoryPartId: "${inventoryPartId}"`);
         console.log(`    📊 서버 재고: ${currentStock}개`);
         console.log(`    📈 필요 수량: ${requiredQty}개`);
         
