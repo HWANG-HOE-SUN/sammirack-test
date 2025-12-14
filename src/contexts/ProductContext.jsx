@@ -1240,6 +1240,7 @@ const makeExtraOptionBOM = () => {
               } else {
                 // 매핑 없으면 매핑된 inventoryPartId에서 색상 제거하여 partId 생성
                 // 예: "하이랙-기둥메트그레이(볼트식)270kg-높이150270kg" → "하이랙-기둥-높이150270kg"
+                console.log(`  ⚠️ 매핑 실패 - inventoryPartId에서 색상 제거 시도: "${mappedInventoryPartIds}"`);
                 const parts = mappedInventoryPartIds.split('-');
                 if (parts.length >= 3) {
                   let partName = parts[1];
@@ -1250,9 +1251,11 @@ const makeExtraOptionBOM = () => {
                     .replace(/블루\(기둥\.선반\)\+오렌지\(빔\)\d+kg/g, '')
                     .trim();
                   partIdForPrice = `${parts[0]}-${partName}-${parts[2]}`;
+                  console.log(`  ✅ 색상 제거 후 partId: "${partIdForPrice}"`);
                 } else {
                   // ⚠️ 중요: generatePartId를 호출할 때 name은 "기둥" 또는 "선반"만 사용
                   // cleanName이 "45x150메트그레이기둥"이면 "기둥"으로 변환
+                  // finalSpecification이 이미 올바르게 설정되어 있어야 함 (높이150270kg 또는 사이즈45x108270kg)
                   let partNameForPrice = cleanName;
                   if (cleanName.includes('기둥')) {
                     partNameForPrice = '기둥';
@@ -1262,11 +1265,13 @@ const makeExtraOptionBOM = () => {
                     partNameForPrice = '로드빔';
                   }
                   
+                  console.log(`  ⚠️ generatePartId 호출: name="${partNameForPrice}", spec="${finalSpecification}"`);
                   partIdForPrice = generatePartId({ 
                     rackType: selectedType, 
                     name: partNameForPrice, 
                     specification: finalSpecification || '' 
                   });
+                  console.log(`  ⚠️ 생성된 partId: "${partIdForPrice}"`);
                 }
               }
             } else {

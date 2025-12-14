@@ -107,7 +107,18 @@ export default function BOMDisplay({ bom, title, currentUser, selectedRackOption
     console.log('🔧 안전한 item 생성:', safeItem);
 
     try {
-      const partId = generatePartId(safeItem);
+      // ⚠️ 중요: BOM에 partId가 이미 저장되어 있으면 우선 사용 (가격용 ID)
+      // 추가 옵션의 경우 올바른 가격용 ID가 이미 저장되어 있음
+      let partId;
+      if (safeItem.partId) {
+        partId = safeItem.partId;
+        console.log(`  ✅ BOM에 저장된 partId 사용: "${partId}"`);
+      } else {
+        // partId가 없으면 generatePartId로 생성 (하위 호환성)
+        partId = generatePartId(safeItem);
+        console.log(`  ⚠️ generatePartId로 생성: "${partId}"`);
+      }
+      
       const usingOptions = getRackOptionsUsingPart(partId);
       
       // 안전한 displayName 생성
