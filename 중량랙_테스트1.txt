@@ -1,0 +1,173 @@
+📋 프린트 재고 감소 시작: 청구서 test_heavy
+index-BF2Ttpce.js:407 📦 카트 아이템: (2) [{…}, {…}]
+index-BF2Ttpce.js:407 📦 서버 재고 데이터: {경량랙-기둥-h1200: 250, 경량랙-기둥-h1500: 250, 경량랙-기둥-h1800: 250, 경량랙-기둥-h2100: 246, 경량랙-기둥-h2400: 250, …}
+index-BF2Ttpce.js:407 📦 서버 재고 항목 수: 323
+index-BF2Ttpce.js:407 
+🔍 카트 아이템 1: {name: '중량랙 독립형 W900xD450 H900 L2', quantity: '1', hasBOM: true}
+index-BF2Ttpce.js:408   📦 BOM 항목 수: 10
+index-BF2Ttpce.js:409 
+  📌 BOM 1: 기둥
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-기둥-h900"
+index-BF2Ttpce.js:410     📊 서버 재고: 238개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 238 → 234
+index-BF2Ttpce.js:409 
+  📌 BOM 2: 선반
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-선반-w900xd450"
+index-BF2Ttpce.js:410     📊 서버 재고: 246개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 246 → 244
+index-BF2Ttpce.js:409 
+  📌 BOM 3: 받침(상)
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-받침상-d450"
+index-BF2Ttpce.js:410     📊 서버 재고: 248개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 248 → 246
+index-BF2Ttpce.js:409 
+  📌 BOM 4: 받침(하)
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-받침하-d450"
+index-BF2Ttpce.js:410     📊 서버 재고: 248개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 248 → 246
+index-BF2Ttpce.js:409 
+  📌 BOM 5: 연결대
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-연결대-w900"
+index-BF2Ttpce.js:410     📊 서버 재고: 246개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 246 → 242
+index-BF2Ttpce.js:409 
+  📌 BOM 6: 안전핀
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-안전핀-"
+index-BF2Ttpce.js:410     📊 서버 재고: 178개
+index-BF2Ttpce.js:410     📈 필요 수량: 8개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 178 → 170
+index-BF2Ttpce.js:408 
+  📌 BOM 7: 45x125
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-45x125-"
+index-BF2Ttpce.js:410     📊 서버 재고: 250개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 250 → 249
+index-BF2Ttpce.js:408 
+  📌 BOM 8: 45x155
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-45x155-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 9: 45x95
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-45x95-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:409 
+  📌 BOM 10: 안전좌
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-안전좌-"
+index-BF2Ttpce.js:410     📊 서버 재고: 218개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 218 → 214
+index-BF2Ttpce.js:407 
+🔍 카트 아이템 2: {name: '중량랙 독립형 W1200xD600 H1800 L2', quantity: '1', hasBOM: true}
+index-BF2Ttpce.js:408   📦 BOM 항목 수: 17
+index-BF2Ttpce.js:409 
+  📌 BOM 1: 기둥
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-기둥-h1800"
+index-BF2Ttpce.js:410     📊 서버 재고: 250개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 250 → 246
+index-BF2Ttpce.js:409 
+  📌 BOM 2: 선반
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-선반-w1200xd600"
+index-BF2Ttpce.js:410     📊 서버 재고: 250개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 250 → 248
+index-BF2Ttpce.js:409 
+  📌 BOM 3: 받침(상)
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-받침상-d600"
+index-BF2Ttpce.js:410     📊 서버 재고: 250개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 250 → 248
+index-BF2Ttpce.js:409 
+  📌 BOM 4: 받침(하)
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-받침하-d600"
+index-BF2Ttpce.js:410     📊 서버 재고: 250개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 250 → 248
+index-BF2Ttpce.js:409 
+  📌 BOM 5: 연결대
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-연결대-w1200"
+index-BF2Ttpce.js:410     📊 서버 재고: 250개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 250 → 246
+index-BF2Ttpce.js:409 
+  📌 BOM 6: 안전핀
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-안전핀-"
+index-BF2Ttpce.js:410     📊 서버 재고: 178개
+index-BF2Ttpce.js:410     📈 필요 수량: 8개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 178 → 170
+index-BF2Ttpce.js:408 
+  📌 BOM 7: 4개 1set
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-4개1set-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 8: 45x185
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-45x185-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 9: 60x125
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-60x125-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 10: 60x155
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-60x155-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 11: 60x185
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-60x185-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 12: 60x95
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-60x95-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 13: 90x125
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-90x125-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 14: 90x155
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-90x155-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 15: 90x185
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-90x185-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:408 
+  📌 BOM 16: 90x95
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "중량랙-90x95-"
+index-BF2Ttpce.js:410     📊 서버 재고: 250개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 250 → 249
+index-BF2Ttpce.js:409 
+  📌 BOM 17: 안전좌
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "중량랙-안전좌-"
+index-BF2Ttpce.js:410     📊 서버 재고: 218개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 218 → 214
+index-BF2Ttpce.js:410 ✅ 로컬스토리지 재고 업데이트 완료

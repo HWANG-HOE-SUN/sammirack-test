@@ -1,0 +1,77 @@
+📋 프린트 재고 감소 시작: 청구서 high_test1
+index-BF2Ttpce.js:407 📦 카트 아이템: Array(2)
+index-BF2Ttpce.js:407 📦 서버 재고 데이터: {경량랙-기둥-h1200: 250, 경량랙-기둥-h1500: 250, 경량랙-기둥-h1800: 250, 경량랙-기둥-h2100: 246, 경량랙-기둥-h2400: 250, …}
+index-BF2Ttpce.js:407 📦 서버 재고 항목 수: 321
+index-BF2Ttpce.js:407 
+🔍 카트 아이템 1: {name: '하이랙 독립형 45x108 150 1단 메트그레이(볼트식)270kg', quantity: '1', hasBOM: true}
+index-BF2Ttpce.js:408   📦 BOM 항목 수: 3
+index-BF2Ttpce.js:409 
+  📌 BOM 1: 기둥
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "하이랙-기둥메트그레이(볼트식)270kg-높이150270kg"
+index-BF2Ttpce.js:410     📊 서버 재고: 230개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 230 → 226
+index-BF2Ttpce.js:409 
+  📌 BOM 2: 선반
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "하이랙-선반메트그레이(볼트식)270kg-사이즈45x108270kg"
+index-BF2Ttpce.js:410     📊 서버 재고: 241개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 241 → 240
+index-BF2Ttpce.js:409 
+  📌 BOM 3: 로드빔
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "하이랙-로드빔메트그레이(볼트식)270kg-108270kg"
+index-BF2Ttpce.js:410     📊 서버 재고: 246개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 246 → 244
+index-BF2Ttpce.js:407 
+🔍 카트 아이템 2: {name: '하이랙 독립형 45x108 150 1단 메트그레이(볼트식)270kg', quantity: '1', hasBOM: true}
+index-BF2Ttpce.js:408   📦 BOM 항목 수: 6
+index-BF2Ttpce.js:408 
+  📌 BOM 1: 45x150(블루기둥)
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "하이랙-45x150-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:409 
+  📌 BOM 2: 기둥
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "하이랙-기둥메트그레이(볼트식)270kg-높이150270kg"
+index-BF2Ttpce.js:410     📊 서버 재고: 230개
+index-BF2Ttpce.js:410     📈 필요 수량: 4개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 230 → 226
+index-BF2Ttpce.js:408 
+  📌 BOM 3: 45x108 매트그레이선반
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "하이랙-선반메트그레이(볼트식)270kg-사이즈45x108270kg"
+index-BF2Ttpce.js:410     📊 서버 재고: 241개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 241 → 240
+index-BF2Ttpce.js:408 
+  📌 BOM 4: 45x108 오렌지선반
+index-BF2Ttpce.js:409     🔑 BOM에서 inventoryPartId 사용: "하이랙-45x108오렌지선반-"
+index-BF2Ttpce.js:410     📊 서버 재고: 0개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ⚠️ 재고 부족: 0 → 0 (부족: 1개)
+index-BF2Ttpce.js:409 
+  📌 BOM 5: 선반
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "하이랙-선반메트그레이(볼트식)270kg-사이즈45x108270kg"
+index-BF2Ttpce.js:410     📊 서버 재고: 241개
+index-BF2Ttpce.js:410     📈 필요 수량: 1개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 241 → 240
+index-BF2Ttpce.js:409 
+  📌 BOM 6: 로드빔
+index-BF2Ttpce.js:410     🔑 generateInventoryPartId로 생성: "하이랙-로드빔메트그레이(볼트식)270kg-108270kg"
+index-BF2Ttpce.js:410     📊 서버 재고: 246개
+index-BF2Ttpce.js:410     📈 필요 수량: 2개
+index-BF2Ttpce.js:410     ✅ 재고 감소: 246 → 244
+index-BF2Ttpce.js:410 ✅ 로컬스토리지 재고 업데이트 완료
+index-BF2Ttpce.js:21 🔄 서버 저장 실행
+index-BF2Ttpce.js:410 ✅ 서버 재고 업데이트 완료
+index-BF2Ttpce.js:411 📦 실시간 재고 업데이트: {inventory: {…}}
+index-BF2Ttpce.js:411 🔄 재고 데이터 로드 시작 - 서버 동기화 중...
+index-BF2Ttpce.js:21 🔄 GitHub 서버에서 데이터 로드 중...
+index-BF2Ttpce.js:410 
+📊 재고 감소 완료: {감소된부품: 9, 부족경고: 2}
+index-BF2Ttpce.js:21 📄 서버 문서 로드 완료: 1개
+index-BF2Ttpce.js:21 ✅ GitHub 서버 데이터 로드 완료
+index-BF2Ttpce.js:411 📦 재고 데이터 로드 완료: 323개 항목
+index-BF2Ttpce.js:24 ✅ GitHub 서버에 데이터 저장 완료 (문서 1개)
+index-BF2Ttpce.js:21 ✅ 서버 저장 완료
