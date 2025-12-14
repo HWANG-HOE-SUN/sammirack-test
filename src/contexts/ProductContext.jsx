@@ -1134,9 +1134,20 @@ const makeExtraOptionBOM = () => {
                     .trim();
                   partIdForPrice = `${parts[0]}-${partName}-${parts[2]}`;
                 } else {
+                  // ⚠️ 중요: generatePartId를 호출할 때 name은 "기둥" 또는 "선반"만 사용
+                  // cleanName이 "45x150메트그레이기둥"이면 "기둥"으로 변환
+                  let partNameForPrice = cleanName;
+                  if (cleanName.includes('기둥')) {
+                    partNameForPrice = '기둥';
+                  } else if (cleanName.includes('선반')) {
+                    partNameForPrice = '선반';
+                  } else if (cleanName.includes('로드빔') || cleanName.includes('빔')) {
+                    partNameForPrice = '로드빔';
+                  }
+                  
                   partIdForPrice = generatePartId({ 
                     rackType: selectedType, 
-                    name: cleanName, 
+                    name: partNameForPrice, 
                     specification: finalSpecification || '' 
                   });
                 }
@@ -1209,9 +1220,20 @@ const makeExtraOptionBOM = () => {
                     .trim();
                   partIdForPrice = `${parts[0]}-${partName}-${parts[2]}`;
                 } else {
+                  // ⚠️ 중요: generatePartId를 호출할 때 name은 "기둥" 또는 "선반"만 사용
+                  // cleanName이 "45x150메트그레이기둥"이면 "기둥"으로 변환
+                  let partNameForPrice = cleanName;
+                  if (cleanName.includes('기둥')) {
+                    partNameForPrice = '기둥';
+                  } else if (cleanName.includes('선반')) {
+                    partNameForPrice = '선반';
+                  } else if (cleanName.includes('로드빔') || cleanName.includes('빔')) {
+                    partNameForPrice = '로드빔';
+                  }
+                  
                   partIdForPrice = generatePartId({ 
                     rackType: selectedType, 
-                    name: cleanName, 
+                    name: partNameForPrice, 
                     specification: finalSpecification || '' 
                   });
                 }
