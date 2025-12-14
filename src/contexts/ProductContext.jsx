@@ -748,12 +748,9 @@ export const ProductProvider=({children})=>{
 // 핵심: 카테고리명에서 무게 정보 추출, 매핑 테이블 우선 확인, 추가상품4/5 색상 구분 처리
 // ⚠️ 중요: inventoryPartId는 반드시 Gist 서버의 inventory.json에 존재하는 ID만 사용
 const makeExtraOptionBOM = () => {
-      const extraBOM = [];
-      const extraOptionsPrices = loadExtraOptionsPrices();
-      const q = Number(quantity) || 1;
-      
-  // ✅ 서버 재고 데이터 로드 (실제 존재하는 ID 확인용)
-  const serverInventory = loadInventory();
+  const extraBOM = [];
+  const extraOptionsPrices = loadExtraOptionsPrices();
+  const q = Number(quantity) || 1;
   
   if (!extraOptionsSel || extraOptionsSel.length === 0) {
     return extraBOM;
@@ -812,14 +809,14 @@ const makeExtraOptionBOM = () => {
   
   // ✅ Object.entries로 카테고리명도 함께 가져오기
   (Object.entries(extraProducts?.[selectedType] || {})).forEach(([categoryName, arr]) => {
-        if (Array.isArray(arr)) {
-          arr.forEach(opt => {
+    if (Array.isArray(arr)) {
+      arr.forEach(opt => {
         // ✅ "기타자재" 제외
-            if (opt.name && opt.name.includes('기타자재')) {
-              return;
-            }
-            
-            if (extraOptionsSel.includes(opt.id)) {
+        if (opt.name && opt.name.includes('기타자재')) {
+          return;
+        }
+        
+        if (extraOptionsSel.includes(opt.id)) {
           console.log(`\n📌 기타 추가 옵션 BOM 처리: ${opt.name} (카테고리: ${categoryName})`);
           
           // ✅ 추가상품6의 경우 extra_options.json의 BOM을 직접 사용
@@ -1301,58 +1298,137 @@ const makeExtraOptionBOM = () => {
             let finalInventoryPartId = mappedInventoryPartIds;
             
             // 관리자 수정 단가 우선 사용
-              const adminPrices = loadAdminPrices();
-              const adminPriceEntry = adminPrices[partIdForPrice];
-              
-              const effectivePrice = adminPriceEntry && adminPriceEntry.price > 0 
-                ? adminPriceEntry.price 
-                : (extraOptionsPrices[opt.id]?.price || Number(opt.price) || 0);
-              
-              const optionQty = Number(opt.quantity) || 1;
-              const totalQty = optionQty * q;
-              
-              extraBOM.push({
-                rackType: selectedType,
-                size: selectedOptions.size || "",
-                name: opt.name,
+            const adminPrices = loadAdminPrices();
+            const adminPriceEntry = adminPrices[partIdForPrice];
+            
+            const effectivePrice = adminPriceEntry && adminPriceEntry.price > 0 
+              ? adminPriceEntry.price 
+              : (extraOptionsPrices[opt.id]?.price || Number(opt.price) || 0);
+            
+            const optionQty = Number(opt.quantity) || 1;
+            const totalQty = optionQty * q;
+            
+            extraBOM.push({
+              rackType: selectedType,
+              size: selectedOptions.size || "",
+              name: opt.name,
               partId: partIdForPrice, // 단가관리용 (색상 제거, 동일 가격)
               inventoryPartId: finalInventoryPartId, // 재고관리용 (색상 포함, 서버에 있는 ID)
               specification: finalSpecification, // ⚠️ 중요: 매핑 테이블에서 추출한 specification 사용
               colorWeight: finalColorWeight,
-                note: opt.note || "",
-                quantity: totalQty,
-                unitPrice: effectivePrice,
-                totalPrice: effectivePrice * totalQty
-              });
+              note: opt.note || "",
+              quantity: totalQty,
+              unitPrice: effectivePrice,
+              totalPrice: effectivePrice * totalQty
+            });
             
             console.log(`    ✅ 기본 원자재로 추가: partId="${partIdForPrice}", inventoryPartId="${finalInventoryPartId}" (${effectivePrice}원)`);
           } else {
-            // ✅ 매핑 없음 - 기존 정상 작동하던 로직 사용
+            // ✅ 매핑 없음 - 별도 부품 (중량바퀴, 합판 등) 또는 매핑 테이블에 없는 하이랙 추가 옵션
+            // ⚠️ 중요: 매핑 테이블에 없는 경우는 매우 드뭅니다. 대부분의 추가 옵션은 매핑 테이블에 있습니다.
+            // 매핑 테이블에 없다는 것은:
+            // 1. 중량바퀴, 합판 등 별도 재고 관리 부품
+            // 2. 매핑 테이블에 추가해야 하는 항목 (이 경우 매핑 테이블에 추가하는 것이 우선)
             console.log(`  ➡️ 매핑 없음: extraOptionId="${extraOptionId}"`);
-            console.log(`  ⚠️ 기존 정상 작동하던 로직 사용: opt.name에서 직접 생성`);
+            console.log(`  ⚠️ 주의: 이 항목이 매핑 테이블에 추가되어야 하는지 확인 필요`);
             
-            // ⚠️ 중요: 기존 정상 작동하던 로직 - opt.name에서 괄호 제거한 cleanName 사용
-            const originalCleanName = (opt.name || '').replace(/\s*\(.*\)\s*/g, '').trim();
-            console.log(`  ✅ 원본 cleanName: "${originalCleanName}" (opt.name: "${opt.name}")`);
+            // ⚠️ 중요: 하이랙의 경우 name에서 색상과 사이즈를 제거하고 기본 부품명만 사용
+            // 예: "45x150메트그레이기둥" → "기둥"
+            let baseName = cleanName;
+            if (selectedType === '하이랙') {
+              if (baseName.includes('기둥')) {
+                baseName = '기둥';
+              } else if (baseName.includes('선반')) {
+                baseName = '선반';
+              } else if (baseName.includes('로드빔') || baseName.includes('빔')) {
+                baseName = '로드빔';
+              }
+            } else if (selectedType === '중량랙') {
+              // 중량랙: "45x155" → "선반" (선반 추가 옵션인 경우)
+              // ⚠️ 중요: 중량랙은 매핑 테이블에 있어야 하므로 여기 도달하면 안 됨
+              if (cleanName.match(/^\d+x\d+$/)) {
+                baseName = '선반';
+                console.log(`  ⚠️ 경고: 중량랙 추가 옵션이 매핑 테이블에 없습니다. 매핑 테이블 확인 필요: "${extraOptionId}"`);
+              }
+            }
             
-            // ⚠️ 중요: 기존 정상 작동하던 방식 - generateInventoryPartId에 opt.name, opt.specification, opt.colorWeight 전달
-            const originalInventoryPartId = generateInventoryPartId({ 
-              rackType: selectedType, 
-              name: originalCleanName, 
-              specification: opt.specification || finalSpecification || '',
-              colorWeight: opt.colorWeight || finalColorWeight || ''
-            });
+            // ⚠️ 중요: specification이 올바르게 설정되어 있는지 확인
+            let correctSpecification = finalSpecification;
+            if (selectedType === '하이랙') {
+              if (baseName === '기둥') {
+                // 기둥: "45x150메트그레이기둥" → "높이150270kg"
+                const heightMatch = cleanName.match(/(\d+)x(\d+)/);
+                if (heightMatch) {
+                  const height = heightMatch[2];
+                  correctSpecification = weight ? `높이${height}${weight}` : `높이${height}`;
+                  console.log(`  ✅ 기둥 specification 재설정: "${correctSpecification}"`);
+                }
+              } else if (baseName === '선반') {
+                // 선반: "45x108매트그레이선반" → "사이즈45x108270kg"
+                const sizeMatch = cleanName.match(/(\d+)x(\d+)/);
+                if (sizeMatch) {
+                  const size = sizeMatch[0];
+                  correctSpecification = weight ? `사이즈${size}${weight}` : `사이즈${size}`;
+                  console.log(`  ✅ 선반 specification 재설정: "${correctSpecification}"`);
+                }
+              } else if (baseName === '로드빔') {
+                // 로드빔: "108" → "108270kg"
+                const rodBeamMatch = cleanName.match(/(\d+)/);
+                if (rodBeamMatch) {
+                  const rodBeamNum = rodBeamMatch[1];
+                  correctSpecification = weight ? `${rodBeamNum}${weight}` : rodBeamNum;
+                  console.log(`  ✅ 로드빔 specification 재설정: "${correctSpecification}"`);
+                }
+              }
+            } else if (selectedType === '중량랙' && baseName === '선반') {
+              // 중량랙 선반: "45x155" → "w1500xd450"
+              // ⚠️ 중요: 중량랙은 매핑 테이블에 있어야 하므로 여기 도달하면 안 됨
+              const sizeMatch = cleanName.match(/(\d+)x(\d+)/);
+              if (sizeMatch) {
+                const convertedSize = convertWeightRackSize(sizeMatch[0]);
+                if (convertedSize) {
+                  correctSpecification = convertedSize;
+                  console.log(`  ✅ 중량랙 선반 specification 변환: "${sizeMatch[0]}" → "${correctSpecification}"`);
+                } else {
+                  console.log(`  ⚠️ 경고: 중량랙 사이즈 변환 실패: "${sizeMatch[0]}"`);
+                }
+              }
+            }
             
-            console.log(`  ✅ 생성된 inventoryPartId: "${originalInventoryPartId}"`);
+            // ⚠️ 중요: 하이랙의 경우 colorWeight가 올바르게 설정되어 있어야 함
+            // generateInventoryPartId는 colorWeight를 받아서 "기둥메트그레이(볼트식)270kg" 형식으로 생성
+            // 예: name="기둥", colorWeight="메트그레이(볼트식)270kg" → "기둥메트그레이(볼트식)270kg"
+            if (selectedType === '하이랙' && !finalColorWeight) {
+              // colorWeight가 없으면 카테고리명과 이름에서 추출
+              if (color) {
+                finalColorWeight = weight ? `${color}${weight}` : color;
+                console.log(`  ✅ colorWeight 추출: "${finalColorWeight}"`);
+              } else {
+                console.log(`  ⚠️ 경고: 하이랙인데 colorWeight를 추출하지 못했습니다.`);
+              }
+            }
             
             // 가격용 ID 생성 (색상 제거)
             const partIdForPrice = generatePartId({ 
               rackType: selectedType, 
-              name: originalCleanName, 
-              specification: opt.specification || finalSpecification || '' 
+              name: baseName, 
+              specification: correctSpecification || finalSpecification || '' 
+            });
+            
+            // 재고용 ID 생성 (색상 포함)
+            // ⚠️ 중요: 하이랙의 경우 generateInventoryPartId가 colorWeight를 받아서 정확한 형식으로 생성
+            // 예: name="기둥", specification="높이150270kg", colorWeight="메트그레이(볼트식)270kg"
+            // → "하이랙-기둥메트그레이(볼트식)270kg-높이150270kg"
+            const originalInventoryPartId = generateInventoryPartId({
+              rackType: selectedType,
+              name: baseName, // ⚠️ 중요: 기본 부품명만 사용 ("기둥", "선반", "로드빔")
+              specification: correctSpecification || finalSpecification || '',
+              colorWeight: finalColorWeight || '' // ⚠️ 중요: 색상 정보 포함 (하이랙만)
             });
             
             console.log(`  ✅ 생성된 partId: "${partIdForPrice}"`);
+            console.log(`  ✅ 생성된 inventoryPartId: "${originalInventoryPartId}"`);
+            console.log(`  ✅ 사용된 baseName: "${baseName}", specification: "${correctSpecification || finalSpecification}", colorWeight: "${finalColorWeight}"`);
             
             const adminPrices = loadAdminPrices();
             const adminPriceEntry = adminPrices[partIdForPrice];
@@ -1369,104 +1445,7 @@ const makeExtraOptionBOM = () => {
               size: selectedOptions.size || "",
               name: opt.name,
               partId: partIdForPrice, // 단가관리용
-              inventoryPartId: originalInventoryPartId, // 재고관리용 (기존 정상 작동하던 방식)
-              specification: opt.specification || finalSpecification,
-              colorWeight: opt.colorWeight || finalColorWeight,
-              note: opt.note || "",
-              quantity: totalQty,
-              unitPrice: effectivePrice,
-              totalPrice: effectivePrice * totalQty
-            });
-            
-            console.log(`    ✅ 별도 부품으로 추가: partId="${partIdForPrice}", inventoryPartId="${originalInventoryPartId}" (${effectivePrice}원)`);
-          }
-            // ✅ 매핑 없음 - 별도 부품 (중량바퀴, 합판 등) 또는 매핑 테이블에 없는 하이랙 추가 옵션
-            console.log(`  ➡️ 매핑 없음: extraOptionId="${extraOptionId}"`);
-            console.log(`  ⚠️ 매핑 테이블에 없음 - generateInventoryPartId로 생성`);
-            
-            // ⚠️ 중요: 하이랙의 경우 name에서 색상과 사이즈를 제거하고 기본 부품명만 사용
-            let baseName = cleanName;
-            if (selectedType === '하이랙') {
-              // "45x150메트그레이기둥" → "기둥"
-              // "45x108매트그레이선반" → "선반"
-              if (baseName.includes('기둥')) {
-                baseName = '기둥';
-              } else if (baseName.includes('선반')) {
-                baseName = '선반';
-              } else if (baseName.includes('로드빔') || baseName.includes('빔')) {
-                baseName = '로드빔';
-              }
-            }
-            
-            // ⚠️ 중요: finalSpecification이 올바르게 설정되어 있는지 확인
-            // 기둥: "높이150270kg", 선반: "사이즈45x108270kg"
-            let correctSpecification = finalSpecification;
-            if (selectedType === '하이랙') {
-              // ⚠️ 중요: 기둥과 선반을 구분하여 specification 재설정
-              // finalSpecification이 이미 잘못 설정되어 있을 수 있으므로 항상 재설정
-              if (baseName === '기둥') {
-                // 기둥: "45x150메트그레이기둥" → "높이150270kg"
-                // ⚠️ 중요: 기둥은 "사이즈"가 아니라 "높이" 형식이어야 함
-                const heightMatch = cleanName.match(/(\d+)x(\d+)/);
-                if (heightMatch) {
-                  const height = heightMatch[2];
-                  correctSpecification = weight ? `높이${height}${weight}` : `높이${height}`;
-                  console.log(`  ✅ 기둥 specification 재설정: "${correctSpecification}" (기존: "${finalSpecification}")`);
-                }
-              } else if (baseName === '선반') {
-                // 선반: "45x108매트그레이선반" → "사이즈45x108270kg"
-                const sizeMatch = cleanName.match(/(\d+)x(\d+)/);
-                if (sizeMatch) {
-                  const size = sizeMatch[0];
-                  correctSpecification = weight ? `사이즈${size}${weight}` : `사이즈${size}`;
-                  console.log(`  ✅ 선반 specification 재설정: "${correctSpecification}" (기존: "${finalSpecification}")`);
-                } else {
-                  // extractHighRackSpec 사용
-                  const spec = extractHighRackSpec(opt.name);
-                  if (spec) {
-                    correctSpecification = weight ? `${spec}${weight}` : spec;
-                  }
-                }
-              }
-            }
-            
-            // ⚠️ 중요: 가격용 ID와 재고용 ID 구분
-            // 가격용 ID: 색상 제거 (동일 가격)
-            const partIdForPrice = generatePartId({ 
-              rackType: selectedType, 
-              name: baseName, 
-              specification: correctSpecification || finalSpecification || '' 
-            });
-            
-            // 재고용 ID: 색상 포함 (정확한 재고 추적)
-            // ⚠️ 중요: 하이랙의 경우 colorWeight가 올바르게 설정되어 있어야 함
-            const originalInventoryPartId = generateInventoryPartId({
-              rackType: selectedType,
-              name: baseName, // ⚠️ 중요: 색상 제거된 기본 부품명 사용
-              specification: correctSpecification || finalSpecification || '',
-              colorWeight: finalColorWeight || '' // ⚠️ 중요: 색상 정보 포함
-            });
-            
-            console.log(`  ✅ 생성된 partId: "${partIdForPrice}"`);
-            console.log(`  ✅ 생성된 inventoryPartId: "${originalInventoryPartId}"`);
-            console.log(`  ✅ 사용된 colorWeight: "${finalColorWeight}"`);
-            
-            const adminPrices = loadAdminPrices();
-            const adminPriceEntry = adminPrices[partIdForPrice];
-            
-            const effectivePrice = adminPriceEntry && adminPriceEntry.price > 0 
-              ? adminPriceEntry.price 
-              : (extraOptionsPrices[opt.id]?.price || Number(opt.price) || 0);
-            
-            const optionQty = Number(opt.quantity) || 1;
-            const totalQty = optionQty * q;
-            
-            extraBOM.push({
-              rackType: selectedType,
-              size: selectedOptions.size || "",
-              name: opt.name,
-              partId: partIdForPrice, // 단가관리용 (색상 제거, 동일 가격)
-              inventoryPartId: originalInventoryPartId, // 재고관리용 (색상 포함, 정확한 재고 추적)
+              inventoryPartId: originalInventoryPartId, // 재고관리용
               specification: correctSpecification || finalSpecification,
               colorWeight: finalColorWeight,
               note: opt.note || "",
@@ -1482,8 +1461,8 @@ const makeExtraOptionBOM = () => {
     }
   });
   
-      return extraBOM;
-    };
+  return extraBOM;
+};
 
   const appendCommonHardwareIfMissing = (base, qty) => {
     const names = new Set(base.map(b => normalizePartName(b.name)));
