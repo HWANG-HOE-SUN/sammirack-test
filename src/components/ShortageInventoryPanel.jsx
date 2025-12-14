@@ -177,12 +177,13 @@ function ShortageInventoryPanel({
         </h4>
         
         {shortageItems.map((item, index) => {
-          const partId = generateInventoryPartId(
-            item.rackType || '',
-            item.name || '',
-            item.specification || '',
-            item.colorWeight || ''
-          );
+          // ⚠️ 중요: item.partId가 있으면 우선 사용 (재고관리용 ID)
+          const partId = item.partId || generateInventoryPartId({
+            rackType: item.rackType || '',
+            name: item.name || '',
+            specification: item.specification || '',
+            colorWeight: item.colorWeight || ''
+          });
           const currentStock = inventory[partId] || 0;
 
           return (

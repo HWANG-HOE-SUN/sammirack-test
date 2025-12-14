@@ -743,12 +743,19 @@ const checkInventoryAvailability = async (cartItems) => {
       }
       
       item.bom.forEach((bomItem) => {
-        const inventoryPartId = generateInventoryPartId({
-          rackType: bomItem.rackType || '',
-          name: bomItem.name || '',
-          specification: bomItem.specification || '',
-          colorWeight: bomItem.colorWeight || ''
-        });
+        // ⚠️ 중요: BOM에 inventoryPartId가 있으면 우선 사용 (하이랙 등)
+        let inventoryPartId;
+        if (bomItem.inventoryPartId) {
+          inventoryPartId = bomItem.inventoryPartId;
+        } else {
+          // 기존 로직 (하위 호환성)
+          inventoryPartId = generateInventoryPartId({
+            rackType: bomItem.rackType || '',
+            name: bomItem.name || '',
+            specification: bomItem.specification || '',
+            colorWeight: bomItem.colorWeight || ''
+          });
+        }
         
         const requiredQty = Number(bomItem.quantity) || 0;
         const currentStock = Number(serverInventory[inventoryPartId]) || 0;
