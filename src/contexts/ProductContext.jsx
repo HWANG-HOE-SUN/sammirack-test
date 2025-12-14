@@ -745,7 +745,7 @@ export const ProductProvider=({children})=>{
       };
 
 // ✅ Phase 2 수정: makeExtraOptionBOM() 함수 완전 재작성
-// 핵심: 카테고리명에서 무게 정보 추출, 매핑 테이블 우선 확인
+// 핵심: 카테고리명에서 무게 정보 추출, 매핑 테이블 우선 확인, 추가상품4/5 색상 구분 처리
 const makeExtraOptionBOM = () => {
   const extraBOM = [];
   const extraOptionsPrices = loadExtraOptionsPrices();
@@ -952,8 +952,9 @@ const makeExtraOptionBOM = () => {
               }
             } else if (categoryName?.includes('추가상품4')) {
               // 추가상품4 (450kg 메트그레이 기둥 및 선반추가)
-              // ⚠️ 추가상품4는 메트그레이이므로 매핑 테이블에서 메트그레이로 매핑됨
-              // 하지만 같은 extra option ID를 사용하므로 카테고리명으로 구분 필요
+              // ⚠️ 중요: 추가상품4는 메트그레이 색상이므로 매핑 테이블에서 메트그레이 재고로 감소
+              // 추가상품5와 같은 extra option ID를 사용하지만 카테고리명으로 구분하여 처리
+              // 매핑 테이블: 하이랙-60x108선반450kg- → 하이랙-선반메트그레이(볼트식)450kg-사이즈60x108450kg
               const sizeMatch = cleanName.match(/(\d+)x(\d+)/);
               if (sizeMatch) {
                 if (cleanName.includes('선반')) {
@@ -968,105 +969,19 @@ const makeExtraOptionBOM = () => {
               }
             } else if (categoryName?.includes('추가상품5')) {
               // 추가상품5 (450kg 블루+오렌지 기둥 및 선반추가)
-              // ⚠️ 추가상품5는 블루+오렌지이므로 매핑 테이블에 없음
-              // 카테고리명으로 구분하여 직접 inventoryPartId 생성
+              // 추가상품4와 동일한 extra option ID 형식 사용
               const sizeMatch = cleanName.match(/(\d+)x(\d+)/);
               if (sizeMatch) {
                 if (cleanName.includes('선반')) {
-                  // 블루+오렌지 선반: 하이랙-선반블루(기둥)+오렌지(가로대)(볼트식)450kg-사이즈60x108450kg
-                  finalSpecification = `사이즈${sizeMatch[1]}x${sizeMatch[2]}450kg`;
-                  finalColorWeight = '블루(기둥)+오렌지(가로대)(볼트식)450kg';
-                  // 매핑 테이블에 없으므로 직접 inventoryPartId 생성
-                  const directInventoryPartId = generateInventoryPartId({
-                    rackType: selectedType,
-                    name: '선반',
-                    specification: finalSpecification,
-                    colorWeight: finalColorWeight
-                  });
-                  
-                  // 단가관리용 partId (색상 제거) - 추가상품4와 동일
-                  const directPartId = generatePartId({
-                    rackType: selectedType,
-                    name: '선반',
-                    specification: finalSpecification
-                  });
-                  
-                  const adminPrices = loadAdminPrices();
-                  const adminPriceEntry = adminPrices[directPartId];
-                  const effectivePrice = adminPriceEntry && adminPriceEntry.price > 0 
-                    ? adminPriceEntry.price 
-                    : (extraOptionsPrices[opt.id]?.price || Number(opt.price) || 0);
-                  
-                  const optionQty = Number(opt.quantity) || 1;
-                  const totalQty = optionQty * q;
-                  
-                  extraBOM.push({
-                    rackType: selectedType,
-                    size: selectedOptions.size || "",
-                    name: opt.name,
-                    partId: directPartId, // 단가관리용 (추가상품4와 동일)
-                    inventoryPartId: directInventoryPartId, // 재고관리용 (블루+오렌지)
-                    specification: finalSpecification,
-                    colorWeight: finalColorWeight,
-                    note: opt.note || "",
-                    quantity: totalQty,
-                    unitPrice: effectivePrice,
-                    totalPrice: effectivePrice * totalQty
-                  });
-                  
-                  console.log(`    ✅ 추가상품5 블루+오렌지 선반: partId="${directPartId}", inventoryPartId="${directInventoryPartId}" (${effectivePrice}원)`);
-                  return; // 여기서 종료
+                  extraOptionId = `${selectedType}-${sizeMatch[0]}선반450kg-`;
                 } else if (cleanName.includes('기둥')) {
-                  // 블루+오렌지 기둥: 하이랙-기둥블루(기둥)+오렌지(가로대)(볼트식)450kg-높이150450kg
-                  const heightMatch = cleanName.match(/(\d+)x(\d+)/);
-                  if (heightMatch) {
-                    finalSpecification = `높이${heightMatch[2]}450kg`;
-                    finalColorWeight = '블루(기둥)+오렌지(가로대)(볼트식)450kg';
-                    // 매핑 테이블에 없으므로 직접 inventoryPartId 생성
-                    const directInventoryPartId = generateInventoryPartId({
-                      rackType: selectedType,
-                      name: '기둥',
-                      specification: finalSpecification,
-                      colorWeight: finalColorWeight
-                    });
-                    
-                    // 단가관리용 partId (색상 제거) - 추가상품4와 동일
-                    const directPartId = generatePartId({
-                      rackType: selectedType,
-                      name: '기둥',
-                      specification: finalSpecification
-                    });
-                    
-                    const adminPrices = loadAdminPrices();
-                    const adminPriceEntry = adminPrices[directPartId];
-                    const effectivePrice = adminPriceEntry && adminPriceEntry.price > 0 
-                      ? adminPriceEntry.price 
-                      : (extraOptionsPrices[opt.id]?.price || Number(opt.price) || 0);
-                    
-                    const optionQty = Number(opt.quantity) || 1;
-                    const totalQty = optionQty * q;
-                    
-                    extraBOM.push({
-                      rackType: selectedType,
-                      size: selectedOptions.size || "",
-                      name: opt.name,
-                      partId: directPartId, // 단가관리용 (추가상품4와 동일)
-                      inventoryPartId: directInventoryPartId, // 재고관리용 (블루+오렌지)
-                      specification: finalSpecification,
-                      colorWeight: finalColorWeight,
-                      note: opt.note || "",
-                      quantity: totalQty,
-                      unitPrice: effectivePrice,
-                      totalPrice: effectivePrice * totalQty
-                    });
-                    
-                    console.log(`    ✅ 추가상품5 블루+오렌지 기둥: partId="${directPartId}", inventoryPartId="${directInventoryPartId}" (${effectivePrice}원)`);
-                    return; // 여기서 종료
-                  }
+                  extraOptionId = `${selectedType}-${sizeMatch[0]}기둥450kg-`;
+                } else {
+                  extraOptionId = `${selectedType}-${sizeMatch[0]}450kg-`;
                 }
+              } else {
+                extraOptionId = `${selectedType}-${cleanName}-`;
               }
-              // 추가상품5는 위에서 처리되므로 여기 도달하면 안 됨
-              extraOptionId = `${selectedType}-${cleanName}-`;
             } else if (categoryName?.includes('추가상품6')) {
               // 추가상품6 (600kg 블루+오렌지 단추가): 하이랙-80x108선반+빔-
               const sizeMatch = cleanName.match(/(\d+)x(\d+)/);
@@ -1097,7 +1012,7 @@ const makeExtraOptionBOM = () => {
           
           console.log(`  🔑 extra option ID: "${extraOptionId}"`);
           
-          // ✅ 4. 매핑 테이블 확인 (재고관리용) - 먼저 확인!
+          // ✅ 4. 매핑 테이블 확인 (재고관리용)
           const mappedInventoryPartIds = mapExtraToBaseInventoryPart(extraOptionId);
           
           if (Array.isArray(mappedInventoryPartIds)) {
@@ -1105,7 +1020,7 @@ const makeExtraOptionBOM = () => {
             console.log(`  🔀 병합 옵션 분리: ${mappedInventoryPartIds.length}개 부품`);
             
             mappedInventoryPartIds.forEach((mappedInventoryPartId, index) => {
-              // 단가관리용 partId 생성
+              // 단가관리용 partId 생성 (색상 제거) - 무게/규격이 같으면 색깔이 달라도 동일한 가격
               const mappedPartIdForPrice = mapExtraToBasePartId(mappedInventoryPartId);
               let partIdForPrice;
               
@@ -1114,13 +1029,29 @@ const makeExtraOptionBOM = () => {
               } else if (mappedPartIdForPrice) {
                 partIdForPrice = mappedPartIdForPrice;
               } else {
-                // 매핑 없으면 generatePartId로 생성
+                // 매핑 없으면 generatePartId로 생성 (색상 제거)
                 const parts = mappedInventoryPartId.split('-');
                 const extractedName = parts[1] || cleanName;
                 partIdForPrice = generatePartId({ 
                   rackType: selectedType, 
                   name: extractedName, 
                   specification: finalSpecification || '' 
+                });
+              }
+              
+              // ⚠️ 하이랙의 경우: 매핑된 inventoryPartId에서 색상 정보 추출 후 finalColorWeight로 올바른 ID 생성
+              // 서버에 이미 있는 재고관리용 partID 형식으로 생성
+              let finalInventoryPartId = mappedInventoryPartId;
+              if (selectedType === '하이랙' && finalColorWeight) {
+                // 매핑된 ID에서 부품명과 규격 추출
+                const parts = mappedInventoryPartId.split('-');
+                const partName = parts[1] || cleanName;
+                // generateInventoryPartId로 서버에 있는 형식의 ID 생성 (색상 포함)
+                finalInventoryPartId = generateInventoryPartId({
+                  rackType: selectedType,
+                  name: partName,
+                  specification: finalSpecification || '',
+                  colorWeight: finalColorWeight
                 });
               }
               
@@ -1140,8 +1071,8 @@ const makeExtraOptionBOM = () => {
                 rackType: selectedType,
                 size: selectedOptions.size || "",
                 name: opt.name,
-                partId: partIdForPrice, // 단가관리용
-                inventoryPartId: mappedInventoryPartId, // 재고관리용 (기본 원자재 ID)
+                partId: partIdForPrice, // 단가관리용 (색상 제거, 동일 가격)
+                inventoryPartId: finalInventoryPartId, // 재고관리용 (색상 포함, 서버에 있는 ID)
                 specification: finalSpecification,
                 colorWeight: finalColorWeight,
                 note: `${opt.name} 분리 ${index + 1}/${mappedInventoryPartIds.length}`,
@@ -1150,20 +1081,20 @@ const makeExtraOptionBOM = () => {
                 totalPrice: effectivePrice * totalQty
               });
               
-              console.log(`    ✅ 부품 ${index + 1} 추가: partId="${partIdForPrice}", inventoryPartId="${mappedInventoryPartId}" (${effectivePrice}원)`);
+              console.log(`    ✅ 부품 ${index + 1} 추가: partId="${partIdForPrice}", inventoryPartId="${finalInventoryPartId}" (${effectivePrice}원)`);
             });
           } else if (mappedInventoryPartIds !== extraOptionId) {
             // ✅ 단일 매핑 - 기본 원자재로 교체
             console.log(`  🔗 매핑됨: "${extraOptionId}" → "${mappedInventoryPartIds}"`);
             
-            // 단가관리용 partId 생성
+            // 단가관리용 partId 생성 (색상 제거)
             const mappedPartIdForPrice = mapExtraToBasePartId(extraOptionId);
             let partIdForPrice;
             
             if (mappedPartIdForPrice) {
               partIdForPrice = mappedPartIdForPrice;
             } else {
-              // 매핑 없으면 generatePartId로 생성
+              // 매핑 없으면 generatePartId로 생성 (색상 제거)
               const parts = mappedInventoryPartIds.split('-');
               const extractedName = parts[1] || cleanName;
               partIdForPrice = generatePartId({ 
@@ -1171,6 +1102,22 @@ const makeExtraOptionBOM = () => {
                 name: extractedName, 
                 specification: finalSpecification || '' 
               });
+            }
+            
+            // ⚠️ 하이랙의 경우: 매핑된 inventoryPartId가 색상 정보를 포함하지만,
+            // 색상 정보가 없거나 다르면 finalColorWeight를 사용하여 올바른 inventoryPartId 생성
+            let finalInventoryPartId = mappedInventoryPartIds;
+            if (selectedType === '하이랙' && finalColorWeight) {
+              // 하이랙 + 색상 정보 있음 → generateInventoryPartId로 올바른 색상 포함 ID 생성
+              const parts = mappedInventoryPartIds.split('-');
+              const partName = parts[1] || cleanName;
+              finalInventoryPartId = generateInventoryPartId({
+                rackType: selectedType,
+                name: partName,
+                specification: finalSpecification || '',
+                colorWeight: finalColorWeight
+              });
+              console.log(`  🎨 하이랙 색상 정보 적용: "${mappedInventoryPartIds}" → "${finalInventoryPartId}"`);
             }
             
             // 관리자 수정 단가 우선 사용
@@ -1188,8 +1135,8 @@ const makeExtraOptionBOM = () => {
               rackType: selectedType,
               size: selectedOptions.size || "",
               name: opt.name,
-              partId: partIdForPrice, // 단가관리용
-              inventoryPartId: mappedInventoryPartIds, // 재고관리용 (기본 원자재 ID)
+              partId: partIdForPrice, // 단가관리용 (색상 제거, 동일 가격)
+              inventoryPartId: finalInventoryPartId, // 재고관리용 (색상 포함, 서버에 있는 ID)
               specification: finalSpecification,
               colorWeight: finalColorWeight,
               note: opt.note || "",
@@ -1198,7 +1145,7 @@ const makeExtraOptionBOM = () => {
               totalPrice: effectivePrice * totalQty
             });
             
-            console.log(`    ✅ 기본 원자재로 추가: partId="${partIdForPrice}", inventoryPartId="${mappedInventoryPartIds}" (${effectivePrice}원)`);
+            console.log(`    ✅ 기본 원자재로 추가: partId="${partIdForPrice}", inventoryPartId="${finalInventoryPartId}" (${effectivePrice}원)`);
           } else {
             // ✅ 매핑 없음 - 별도 부품 (중량바퀴, 합판 등)
             console.log(`  ➡️ 매핑 없음: 별도 부품으로 처리`);

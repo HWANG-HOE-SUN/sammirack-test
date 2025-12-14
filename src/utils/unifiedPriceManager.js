@@ -90,7 +90,7 @@ export const generateInventoryPartId = (item) => {
   }
 };
 
-// 랙옵션 고유 ID 생성
+// 랙옵션 고유 ID생성
 export const generateRackOptionId = (rackType, size, height, level, formType, color = '') => {
   const parts = [rackType, formType, size, height, level, color].filter(Boolean);
   return parts.join('-').replace(/[^\w가-힣-]/g, '').toLowerCase();
