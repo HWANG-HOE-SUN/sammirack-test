@@ -99,6 +99,13 @@ const DeliveryNoteForm = () => {
       if (saved) {
         try {
                   const data = JSON.parse(saved);
+                  
+                  // ✅ 저장된 cart에서 extraOptions 복원
+                  if (data.cart && Array.isArray(data.cart)) {
+                    console.log('✅ 저장된 cart에서 extraOptions 복원:', data.cart);
+                    // cart는 나중에 사용할 수 있도록 보관 (필요시)
+                  }
+                  
                   setFormData({
                     ...data,
                     documentSettings: data.documentSettings || null  // ✅ 원본 설정 유지
@@ -293,10 +300,18 @@ const handleSave = async () => {
     }
     const storageKey=`delivery_${itemId}`;
     
+    // ✅ cart에서 extraOptions 추출 (문서 저장 시 포함)
+    const cartWithExtraOptions = cart.map(item => ({
+      ...item,
+      extraOptions: item.extraOptions || []
+    }));
+    
     const newDoc={  // ✅ 기존 변수명 그대로 사용
       ...formData,
       id:itemId,
       type:'delivery',
+      // ✅ extraOptions 저장 (문서 로드 시 복원용)
+      cart: cartWithExtraOptions,
       status:formData.status||'진행 중',
       deliveryNumber:formData.documentNumber,
       // ✅ 문서 설정: 편집=기존유지, 신규=현재전역설정
